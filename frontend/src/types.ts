@@ -18,6 +18,7 @@ export interface RequiredFile {
   key: string;
   label: string;
   description: string;
+  group: 'input' | 'base';
   optional?: boolean;
 }
 

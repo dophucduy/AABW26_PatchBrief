@@ -1,15 +1,14 @@
 using GameBalance.Api;
 using GameBalance.Api.Community;
+using GameBalance.Pipeline.Layers.L0Adaptive;
 using GameBalance.Pipeline.Contracts;
 using GameBalance.Pipeline.Layers.L0Adaptive;
-using GameBalance.Pipeline.Layers.L1Ingest;
-using GameBalance.Pipeline.Layers.L2Semantic;
+using Microsoft.AspNetCore.Mvc;
 using GameBalance.Pipeline.Layers.L3Metric;
 using GameBalance.Pipeline.Layers.L4Context;
 using GameBalance.Pipeline.Layers.L5Impact;
 using GameBalance.Pipeline.Layers.L6Risk;
 using GameBalance.Pipeline.Layers.L7Report;
-using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,10 +23,25 @@ builder.Services.AddSingleton<AdaptiveLayer>();
 builder.Services.AddSingleton<TelemetryIngestLayer>();
 builder.Services.AddSingleton<SemanticAnalyzer>();
 builder.Services.AddSingleton<MetricEngine>();
+builder.Services.AddSingleton<ContextBundleBuilder>();
 builder.Services.AddSingleton<CommunityContextBuilder>();
 builder.Services.AddSingleton<ImpactAnalyzer>();
 builder.Services.AddSingleton<RiskFramer>();
 builder.Services.AddSingleton<ReportGenerator>();
+builder.Services.AddSingleton<AdapterStore>();
+builder.Services.AddSingleton<MappingService>();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+        policy.WithOrigins(
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+                "http://localhost:4173",
+                "http://127.0.0.1:4173")
+            .AllowAnyHeader()
+            .AllowAnyMethod());
+});
 
 var app = builder.Build();
 
@@ -41,6 +55,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseCors("Frontend");
 app.UseHttpsRedirection();
 
 app.MapPost("/analyze", async (
@@ -67,7 +82,7 @@ app.MapPost("/analyze", async (
 {
     try
     {
-        return await RunPipelineAsync(
+        return await AnalysisOrchestrator.RunPipelineAsync(
             telemetry_live,
             telemetry_playtest,
             game_definition,
@@ -188,7 +203,7 @@ app.MapGet("/analyze/demo", async (
     IConfiguration configuration,
     CancellationToken cancellationToken) =>
 {
-    string fixtureRoot = ResolveFixtureRoot();
+    string fixtureRoot = AnalysisOrchestrator.ResolveFixtureRoot();
     if (!Directory.Exists(fixtureRoot))
     {
         return Results.NotFound(new { error = $"fixture directory not found: {fixtureRoot}" });
@@ -196,7 +211,7 @@ app.MapGet("/analyze/demo", async (
 
     try
     {
-        return await RunPipelineFromFilesAsync(
+        return await AnalysisOrchestrator.RunPipelineFromFilesAsync(
             Path.Combine(fixtureRoot, "telemetry_live.json"),
             Path.Combine(fixtureRoot, "telemetry_playtest.json"),
             Path.Combine(fixtureRoot, "game_definition.json"),
@@ -223,254 +238,9 @@ app.MapGet("/analyze/demo", async (
 .ProducesProblem(StatusCodes.Status404NotFound)
 .ProducesProblem(StatusCodes.Status400BadRequest);
 
+app.MapFrontendApi();
+
 app.Run();
 
-static async Task<IResult> RunPipelineAsync(
-    IFormFile telemetryLive,
-    IFormFile telemetryPlaytest,
-    IFormFile gameDefinition,
-    IFormFile contextBundle,
-    IFormFile? adapter,
-    string? communityGameName,
-    int? communityMaxReviews,
-    string? communityLanguage,
-    AdaptiveLayer adaptiveLayer,
-    TelemetryIngestLayer telemetryIngestLayer,
-    SemanticAnalyzer semanticAnalyzer,
-    MetricEngine metricEngine,
-    CommunityContextBuilder communityContextBuilder,
-    ApifyCommunityClient apifyCommunityClient,
-    ImpactAnalyzer impactAnalyzer,
-    RiskFramer riskFramer,
-    ReportGenerator reportGenerator,
-    IHttpClientFactory httpClientFactory,
-    IConfiguration configuration,
-    CancellationToken cancellationToken)
-{
-    string liveJson = await JsonUploadParser.ReadTextAsync(telemetryLive, cancellationToken);
-    string playtestJson = await JsonUploadParser.ReadTextAsync(telemetryPlaytest, cancellationToken);
-    string gameDefinitionJson = await JsonUploadParser.ReadTextAsync(gameDefinition, cancellationToken);
-    string contextBundleJson = await JsonUploadParser.ReadTextAsync(contextBundle, cancellationToken);
-    string? adapterJson = adapter is null
-        ? null
-        : await JsonUploadParser.ReadTextAsync(adapter, cancellationToken);
+public partial class Program;
 
-    return await ExecutePipelineAsync(
-        liveJson,
-        playtestJson,
-        gameDefinitionJson,
-        contextBundleJson,
-        adapterJson,
-        communityGameName,
-        communityMaxReviews,
-        communityLanguage,
-        adaptiveLayer,
-        telemetryIngestLayer,
-        semanticAnalyzer,
-        metricEngine,
-        communityContextBuilder,
-        apifyCommunityClient,
-        impactAnalyzer,
-        riskFramer,
-        reportGenerator,
-        httpClientFactory,
-        configuration,
-        cancellationToken);
-}
-
-static async Task<IResult> RunPipelineFromFilesAsync(
-    string telemetryLivePath,
-    string telemetryPlaytestPath,
-    string gameDefinitionPath,
-    string contextBundlePath,
-    string adapterPath,
-    AdaptiveLayer adaptiveLayer,
-    TelemetryIngestLayer telemetryIngestLayer,
-    SemanticAnalyzer semanticAnalyzer,
-    MetricEngine metricEngine,
-    ImpactAnalyzer impactAnalyzer,
-    RiskFramer riskFramer,
-    ReportGenerator reportGenerator,
-    IHttpClientFactory httpClientFactory,
-    IConfiguration configuration,
-    CancellationToken cancellationToken)
-{
-    string liveJson = await File.ReadAllTextAsync(telemetryLivePath, cancellationToken);
-    string playtestJson = await File.ReadAllTextAsync(telemetryPlaytestPath, cancellationToken);
-    string gameDefinitionJson = await File.ReadAllTextAsync(gameDefinitionPath, cancellationToken);
-    string contextBundleJson = await File.ReadAllTextAsync(contextBundlePath, cancellationToken);
-    string? adapterJson = File.Exists(adapterPath)
-        ? await File.ReadAllTextAsync(adapterPath, cancellationToken)
-        : null;
-
-    return await ExecutePipelineAsync(
-        liveJson,
-        playtestJson,
-        gameDefinitionJson,
-        contextBundleJson,
-        adapterJson,
-        communityGameName: null,
-        communityMaxReviews: null,
-        communityLanguage: null,
-        adaptiveLayer,
-        telemetryIngestLayer,
-        semanticAnalyzer,
-        metricEngine,
-        communityContextBuilder: null,
-        apifyCommunityClient: null,
-        impactAnalyzer,
-        riskFramer,
-        reportGenerator,
-        httpClientFactory,
-        configuration,
-        cancellationToken);
-}
-
-static async Task<IResult> ExecutePipelineAsync(
-    string liveTelemetryJson,
-    string playtestTelemetryJson,
-    string gameDefinitionJson,
-    string contextBundleJson,
-    string? adapterJson,
-    string? communityGameName,
-    int? communityMaxReviews,
-    string? communityLanguage,
-    AdaptiveLayer adaptiveLayer,
-    TelemetryIngestLayer telemetryIngestLayer,
-    SemanticAnalyzer semanticAnalyzer,
-    MetricEngine metricEngine,
-    CommunityContextBuilder? communityContextBuilder,
-    ApifyCommunityClient? apifyCommunityClient,
-    ImpactAnalyzer impactAnalyzer,
-    RiskFramer riskFramer,
-    ReportGenerator reportGenerator,
-    IHttpClientFactory httpClientFactory,
-    IConfiguration configuration,
-    CancellationToken cancellationToken)
-{
-    AdapterConfig adapter = AdapterConfig.Parse(adapterJson);
-    var (adaptedLive, adaptedPlaytest) = adaptiveLayer.ApplyTelemetry(
-        liveTelemetryJson,
-        playtestTelemetryJson,
-        adapter);
-    TelemetryIngestResult telemetryIngest = telemetryIngestLayer.Normalize(
-        adaptedLive.Records,
-        adaptedPlaytest.Records);
-    MetricResult metric = metricEngine.FromTelemetry(telemetryIngest.Records);
-    SemanticResult semantic = semanticAnalyzer.AnalyzeFromMetrics(metric, gameDefinitionJson);
-    ContextBundle context = ContextBundleParser.Parse(contextBundleJson);
-    CommunityScrapeResponse? communitySource = null;
-    if (!string.IsNullOrWhiteSpace(communityGameName))
-    {
-        if (communityContextBuilder is null || apifyCommunityClient is null)
-        {
-            throw new InvalidOperationException("Apify community integration is unavailable");
-        }
-
-        var scrapeRequest = new CommunityScrapeRequest
-        {
-            GameName = communityGameName,
-            MaxReviews = communityMaxReviews ?? 100,
-            Language = string.IsNullOrWhiteSpace(communityLanguage)
-                ? "english"
-                : communityLanguage,
-        };
-        ApifyCommunityResult scraped = await apifyCommunityClient.ScrapeAsync(
-            scrapeRequest,
-            cancellationToken);
-        context = communityContextBuilder.Merge(context, scraped.Feedback);
-        communitySource = new CommunityScrapeResponse
-        {
-            GameName = scraped.GameName,
-            RunId = scraped.RunId,
-            DatasetId = scraped.DatasetId,
-            ReviewCount = scraped.Feedback.Count,
-            Community = context.Community,
-        };
-    }
-    ImpactResult impact = impactAnalyzer.Analyze(metric, context);
-    RiskResult risk = riskFramer.Analyze(impact, context);
-    LlmOptions llmOptions = ReadLlmOptions(configuration);
-    HttpClient httpClient = httpClientFactory.CreateClient();
-    httpClient.Timeout = TimeSpan.FromSeconds(llmOptions.TimeoutSeconds);
-    InsightReport report = await reportGenerator.GenerateAsync(
-        metric,
-        context,
-        impact,
-        risk,
-        llmOptions,
-        httpClient,
-        cancellationToken);
-
-    IReadOnlyList<string> adapterWarnings = adaptedLive.Warnings
-        .Select(warning => $"[live] {warning}")
-        .Concat(adaptedPlaytest.Warnings.Select(warning => $"[playtest] {warning}"))
-        .ToList();
-
-    var ingest = new IngestResult
-    {
-        MetricRows = telemetryIngest.Records,
-        Warnings = telemetryIngest.Warnings,
-    };
-
-    var response = new AnalyzeResponse
-    {
-        Adapter = new AdapterStageResponse
-        {
-            LiveRecordCount = adaptedLive.Records.Count,
-            PlaytestRecordCount = adaptedPlaytest.Records.Count,
-            Warnings = adapterWarnings,
-        },
-        Ingest = ingest,
-        Semantic = semantic,
-        Metric = metric,
-        Context = context,
-        CommunitySource = communitySource,
-        Impact = impact,
-        Risk = risk,
-        Report = report,
-        Warnings = adapterWarnings
-            .Concat(ingest.Warnings)
-            .Concat(semantic.Warnings)
-            .Concat(context.Warnings)
-            .ToList(),
-    };
-    return Results.Ok(response);
-}
-
-static LlmOptions ReadLlmOptions(IConfiguration configuration) => new()
-{
-    Provider = configuration["Llm:Provider"] ?? "OpenAI",
-    ApiKey = configuration["Llm:ApiKey"],
-        Impact = impact,
-        Risk = risk,
-        Report = report,
-        Warnings = adapterWarnings
-            .Concat(ingest.Warnings)
-            .Concat(semantic.Warnings)
-            .Concat(context.Warnings)
-            .ToList(),
-    };
-    return Results.Ok(response);
-}
-
-static LlmOptions ReadLlmOptions(IConfiguration configuration) => new()
-{
-    Provider = configuration["Llm:Provider"] ?? "OpenAI",
-    ApiKey = configuration["Llm:ApiKey"],
-    Model = configuration["Llm:Model"] ?? "gpt-4o-mini",
-    BaseUrl = configuration["Llm:BaseUrl"] ?? "https://api.openai.com/v1",
-    TimeoutSeconds = int.TryParse(configuration["Llm:TimeoutSeconds"], out int timeout) ? timeout : 30,
-};
-
-static string ResolveFixtureRoot()
-{
-    string[] candidates =
-    [
-        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "..", "fixtures", "demo_case")),
-        Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "fixtures", "demo_case")),
-        Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "fixtures", "demo_case")),
-    ];
-
-    return candidates.FirstOrDefault(Directory.Exists) ?? candidates[0];
-}

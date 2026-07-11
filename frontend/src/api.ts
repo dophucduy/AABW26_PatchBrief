@@ -56,17 +56,30 @@ export const confirmMapping = (payload: AdapterPayload) => request<Record<string
 
 export const listAdapters = () => request<{ adapters?: AdapterSummary[] }>('/api/mapping');
 
-export const runAnalysis = (files: AnalyzeFiles, adapterId?: string) => {
+export interface DemoFixtureFiles {
+  telemetry: string;
+  game_definition: string;
+  rules: string;
+  update_plan: string;
+  adapter_id?: string;
+}
+
+export const loadDemoFiles = () => request<DemoFixtureFiles>('/api/analyze/demo/files');
+
+export const runDemoAnalysis = () => request<PatchReport>('/api/analyze/demo');
+
+export const runAnalysis = (files: AnalyzeFiles, gameName: string, adapterId?: string) => {
   const form = new FormData();
   const fieldNames: Record<string, string> = {
-    player_online: 'playerOnline',
-    player_offline: 'playerOffline',
+    telemetry: 'telemetry',
     game_definition: 'gameDefinition',
+    rules: 'rules',
     update_plan: 'updatePlan',
   };
   Object.entries(files).forEach(([key, file]) => {
     if (file) form.append(fieldNames[key] || key, file);
   });
+  if (gameName.trim()) form.append('gameName', gameName.trim());
   if (adapterId) form.append('adapterId', adapterId);
   return request<PatchReport>('/api/analyze', { method: 'POST', body: form });
 };

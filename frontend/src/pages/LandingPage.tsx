@@ -122,7 +122,8 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       </div>
       <div className="landing-content">
       {/* 1. Hero */}
-      <section className="x-section x-section--dark x-section--snap" aria-labelledby="hero-title">
+      <section className="x-section x-section--dark x-section--snap x-section--hero" aria-labelledby="hero-title">
+        <div className="x-section-fx" aria-hidden="true" />
         <div className="x-section-body">
           <div className="x-container hero-grid">
           <div>
@@ -180,7 +181,8 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       </section>
 
       {/* 2. Big video */}
-      <section className="x-section x-section--snap" aria-labelledby="video-title">
+      <section className="x-section x-section--snap x-section--video" aria-labelledby="video-title">
+        <div className="x-section-fx" aria-hidden="true" />
         <div className="x-section-body">
           <div className="x-container">
           <header className="x-section-head" data-reveal>
@@ -197,7 +199,8 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       </section>
 
       {/* 3. What is this product */}
-      <section className="x-section x-section--cream x-section--snap" aria-labelledby="about-title">
+      <section className="x-section x-section--cream x-section--snap x-section--about" aria-labelledby="about-title">
+        <div className="x-section-fx" aria-hidden="true" />
         <div className="x-section-body">
           <div className="x-container">
           <header className="x-section-head" data-reveal>
@@ -220,7 +223,8 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       </section>
 
       {/* 4. Pipeline */}
-      <section id="pipeline" className="x-section x-section--snap x-section--dense" aria-labelledby="pipeline-title">
+      <section id="pipeline" className="x-section x-section--snap x-section--dense x-section--pipeline" aria-labelledby="pipeline-title">
+        <div className="x-section-fx" aria-hidden="true" />
         <div className="x-section-body">
           <div className="x-container">
             <header className="x-section-head x-section-head--compact" data-reveal>
@@ -236,7 +240,8 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       </section>
 
       {/* 5. Why use us */}
-      <section className="x-section x-section--gray x-section--snap x-section--dense" aria-labelledby="why-title">
+      <section className="x-section x-section--gray x-section--snap x-section--dense x-section--why" aria-labelledby="why-title">
+        <div className="x-section-fx" aria-hidden="true" />
         <div className="x-section-body">
           <div className="x-container">
           <header className="x-section-head" data-reveal>
@@ -285,7 +290,8 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       </section>
 
       {/* 6. Try now */}
-      <section className="x-section x-section--dark x-section--snap" aria-labelledby="try-title">
+      <section className="x-section x-section--dark x-section--snap x-section--cta" aria-labelledby="try-title">
+        <div className="x-section-fx" aria-hidden="true" />
         <div className="x-section-body">
           <div className="x-container">
           <div className="try-panel" data-reveal>

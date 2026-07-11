@@ -62,11 +62,14 @@ export const canonicalOptions = [
   'entity_pick', 'area_enter', 'session_start',
 ];
 
-export const requiredFiles: RequiredFile[] = [
-  { key: 'player_online', label: 'player_online.json', description: 'Live telemetry' },
-  { key: 'player_offline', label: 'player_offline.json', description: 'Playtest sessions' },
-  { key: 'game_definition', label: 'game_definition.json', description: 'Roster, stats, roles' },
-  { key: 'rules', label: 'rules.json', description: 'Locked and open levers' },
-  { key: 'update_plan', label: 'update_plan.json', description: 'Planned changes' },
-  { key: 'community', label: 'community.json', description: 'Sentiment and posts', optional: true },
+export const inputFiles: RequiredFile[] = [
+  { key: 'telemetry', label: 'telemetry.json', description: 'Player metrics and session signals for this analysis', group: 'input' },
+  { key: 'update_plan', label: 'update_plan.json', description: 'Proposed patch changes to evaluate', group: 'input' },
 ];
+
+export const baseFiles: RequiredFile[] = [
+  { key: 'game_definition', label: 'game_definition.json', description: 'Roster, stats, and roles the brief is grounded on', group: 'base' },
+  { key: 'rules', label: 'rules.json', description: 'Locked and open balance levers for each entity', group: 'base' },
+];
+
+export const requiredFiles: RequiredFile[] = [...inputFiles, ...baseFiles];

@@ -15,4 +15,8 @@
     <ProjectReference Include="..\GameBalance.Pipeline\GameBalance.Pipeline.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="GameBalance.Tests" />
+  </ItemGroup>
+
 </Project>

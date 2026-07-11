@@ -88,14 +88,24 @@
   padding-block: 0;
   box-sizing: border-box;
   overflow: hidden;
+  position: relative;
+  isolation: isolate;
 }
 
-.landing-snap .x-section--snap + .x-section--snap {
-  border-top: 1px solid var(--border-default);
+/* Per-section background effects */
+.x-section-fx {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
 }
 
-.landing-snap .x-section--snap:first-child {
-  border-top: none;
+.x-section-fx::before,
+.x-section-fx::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
 }
 
 .x-section-body {
@@ -105,6 +115,190 @@
   flex-direction: column;
   justify-content: center;
   width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+/* Hero — cyan radar bloom + scan lines */
+.x-section--hero .x-section-fx::before {
+  inset: -20% -10% auto auto;
+  width: min(72vw, 640px);
+  height: min(72vw, 640px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(99, 216, 255, 0.22) 0%, rgba(99, 216, 255, 0.06) 38%, transparent 68%);
+  filter: blur(2px);
+  animation: landing-drift 18s ease-in-out infinite alternate;
+}
+
+.x-section--hero .x-section-fx::after {
+  inset: auto auto -25% -15%;
+  width: min(60vw, 520px);
+  height: min(60vw, 520px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 107, 74, 0.14) 0%, transparent 65%);
+  animation: landing-drift 22s ease-in-out infinite alternate-reverse;
+}
+
+.x-section--hero {
+  background-image:
+    linear-gradient(rgba(99, 216, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99, 216, 255, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
+}
+
+/* Video — soft conic sweep + vignette */
+.x-section--video .x-section-fx::before {
+  inset: -30%;
+  background: conic-gradient(
+    from 210deg at 50% 50%,
+    transparent 0deg,
+    rgba(99, 216, 255, 0.07) 55deg,
+    transparent 110deg,
+    rgba(255, 107, 74, 0.05) 200deg,
+    transparent 280deg
+  );
+  animation: landing-rotate 28s linear infinite;
+}
+
+.x-section--video .x-section-fx::after {
+  inset: 12% 8%;
+  border: 1px solid rgba(99, 216, 255, 0.12);
+  border-radius: 2px;
+  box-shadow:
+    inset 0 0 80px rgba(99, 216, 255, 0.04),
+    0 0 120px rgba(99, 216, 255, 0.03);
+}
+
+/* About — warm paper blooms */
+.x-section--about .x-section-fx::before {
+  top: -18%;
+  right: -8%;
+  width: min(55vw, 480px);
+  height: min(55vw, 480px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 180, 120, 0.18) 0%, transparent 68%);
+}
+
+.x-section--about .x-section-fx::after {
+  bottom: -22%;
+  left: -12%;
+  width: min(50vw, 420px);
+  height: min(50vw, 420px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(99, 216, 255, 0.1) 0%, transparent 70%);
+}
+
+.x-section--about {
+  background-image: repeating-linear-gradient(
+    -12deg,
+    transparent,
+    transparent 28px,
+    rgba(0, 0, 0, 0.018) 28px,
+    rgba(0, 0, 0, 0.018) 29px
+  );
+}
+
+/* Pipeline — flowing data lanes */
+.x-section--pipeline .x-section-fx::before {
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent 0%, rgba(99, 216, 255, 0.08) 50%, transparent 100%),
+    linear-gradient(90deg, transparent 0%, rgba(255, 107, 74, 0.05) 50%, transparent 100%);
+  background-size: 200% 1px, 240% 1px;
+  background-position: 0 38%, 0 62%;
+  background-repeat: no-repeat;
+  animation: landing-flow 6s linear infinite;
+}
+
+.x-section--pipeline .x-section-fx::after {
+  inset: 0;
+  background-image: radial-gradient(circle at 12% 50%, rgba(99, 216, 255, 0.12) 0 2px, transparent 3px),
+    radial-gradient(circle at 34% 50%, rgba(99, 216, 255, 0.08) 0 2px, transparent 3px),
+    radial-gradient(circle at 56% 50%, rgba(255, 107, 74, 0.1) 0 2px, transparent 3px),
+    radial-gradient(circle at 78% 50%, rgba(99, 216, 255, 0.08) 0 2px, transparent 3px);
+  opacity: 0.85;
+}
+
+/* Why — split comparison wash */
+.x-section--why .x-section-fx::before {
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    rgba(255, 107, 74, 0.06) 0%,
+    transparent 42%,
+    transparent 58%,
+    rgba(99, 216, 255, 0.08) 100%
+  );
+}
+
+.x-section--why .x-section-fx::after {
+  inset: 8% 6%;
+  border-inline: 1px dashed rgba(0, 0, 0, 0.08);
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 23px,
+    rgba(0, 0, 0, 0.025) 23px,
+    rgba(0, 0, 0, 0.025) 24px
+  );
+  opacity: 0.55;
+}
+
+/* CTA — pulsing brand spotlight */
+.x-section--cta .x-section-fx::before {
+  top: 50%;
+  left: 50%;
+  width: min(90vw, 720px);
+  height: min(55vh, 420px);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(255, 107, 74, 0.2) 0%, rgba(99, 216, 255, 0.08) 42%, transparent 72%);
+  animation: landing-pulse 5s ease-in-out infinite;
+}
+
+.x-section--cta .x-section-fx::after {
+  inset: 0;
+  background:
+    linear-gradient(rgba(99, 216, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99, 216, 255, 0.05) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 70% 55% at 50% 50%, black 10%, transparent 100%);
+}
+
+@keyframes landing-drift {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(-3%, 4%) scale(1.06); }
+}
+
+@keyframes landing-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes landing-flow {
+  from { background-position: -120% 38%, -140% 62%; }
+  to { background-position: 220% 38%, 240% 62%; }
+}
+
+@keyframes landing-pulse {
+  0%, 100% { opacity: 0.65; transform: translate(-50%, -50%) scale(0.96); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.04); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .x-section-fx::before,
+  .x-section-fx::after {
+    animation: none !important;
+  }
+}
+
+.landing-snap .x-section--snap + .x-section--snap {
+  border-top: 1px solid var(--border-default);
+}
+
+.landing-snap .x-section--snap:first-child {
+  border-top: none;
 }
 
 .landing-snap .x-section--dense .x-section-body {
