@@ -6,6 +6,7 @@ using GameBalance.Pipeline.Contracts;
 using GameBalance.Pipeline.Layers.L5Impact;
 using GameBalance.Pipeline.Layers.L6Risk;
 using GameBalance.Pipeline.Layers.L7Report;
+using GameBalance.Api.Community;
 
 namespace GameBalance.Api;
 
@@ -26,6 +27,9 @@ public sealed class AnalyzeResponse
 
     [JsonPropertyName("l4_context")]
     public ContextBundle? Context { get; init; }
+
+    [JsonPropertyName("community_source")]
+    public CommunityScrapeResponse? CommunitySource { get; init; }
 
     [JsonPropertyName("l5_impact")]
     public ImpactResult? Impact { get; init; }

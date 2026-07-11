@@ -5,6 +5,18 @@ Accept: application/json
 
 ###
 
+POST {{GameBalance.Api_HostAddress}}/community/steam/scrape
+Content-Type: application/json
+
+{
+  "game_name": "Strinova",
+  "max_reviews": 5,
+  "language": "english",
+  "review_type": "all"
+}
+
+###
+
 POST {{GameBalance.Api_HostAddress}}/analyze
 Content-Type: multipart/form-data; boundary=Boundary
 
@@ -33,4 +45,16 @@ Content-Disposition: form-data; name="adapter"; filename="adapter.json"
 Content-Type: application/json
 
 < ../../fixtures/demo_case/adapter.json
+--Boundary
+Content-Disposition: form-data; name="community_game_name"
+
+Strinova
+--Boundary
+Content-Disposition: form-data; name="community_max_reviews"
+
+5
+--Boundary
+Content-Disposition: form-data; name="community_language"
+
+english
 --Boundary--

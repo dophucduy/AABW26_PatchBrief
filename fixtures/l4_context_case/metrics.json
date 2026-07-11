@@ -1,0 +1,85 @@
+{
+  "metrics": {
+    "char_A": {
+      "bronze": {
+        "entity_id": "char_A",
+        "bracket_id": "bronze",
+        "sources": {
+          "online": {
+            "event_count": 1000,
+            "match_count": 1000,
+            "pick_count": 710,
+            "death_count": 0,
+            "win_rate": 0.8,
+            "pick_rate": 0.71,
+            "death_rate": null
+          },
+          "offline": {
+            "event_count": 100,
+            "match_count": 100,
+            "pick_count": 50,
+            "death_count": 0,
+            "win_rate": 0.5,
+            "pick_rate": 0.5,
+            "death_rate": null
+          }
+        },
+        "comparison": {
+          "offline_minus_online_win_rate": -0.3,
+          "offline_minus_online_pick_rate": -0.21,
+          "offline_minus_online_death_rate": null
+        }
+      },
+      "diamond": {
+        "entity_id": "char_A",
+        "bracket_id": "diamond",
+        "sources": {
+          "online": {
+            "event_count": 500,
+            "match_count": 500,
+            "pick_count": 125,
+            "death_count": 0,
+            "win_rate": 0.5,
+            "pick_rate": 0.25,
+            "death_rate": null
+          }
+        },
+        "comparison": null
+      }
+    },
+    "char_B": {
+      "bronze": {
+        "entity_id": "char_B",
+        "bracket_id": "bronze",
+        "sources": {
+          "online": {
+            "event_count": 1000,
+            "match_count": 1000,
+            "pick_count": 290,
+            "death_count": 0,
+            "win_rate": 0,
+            "pick_rate": 0.29,
+            "death_rate": null
+          }
+        },
+        "comparison": null
+      },
+      "diamond": {
+        "entity_id": "char_B",
+        "bracket_id": "diamond",
+        "sources": {
+          "online": {
+            "event_count": 500,
+            "match_count": 500,
+            "pick_count": 375,
+            "death_count": 0,
+            "win_rate": 0.833,
+            "pick_rate": 0.75,
+            "death_rate": null
+          }
+        },
+        "comparison": null
+      }
+    }
+  }
+}

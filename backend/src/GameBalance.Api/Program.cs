@@ -1,9 +1,11 @@
 using GameBalance.Api;
+using GameBalance.Api.Community;
 using GameBalance.Pipeline.Contracts;
 using GameBalance.Pipeline.Layers.L0Adaptive;
 using GameBalance.Pipeline.Layers.L1Ingest;
 using GameBalance.Pipeline.Layers.L2Semantic;
 using GameBalance.Pipeline.Layers.L3Metric;
+using GameBalance.Pipeline.Layers.L4Context;
 using GameBalance.Pipeline.Layers.L5Impact;
 using GameBalance.Pipeline.Layers.L6Risk;
 using GameBalance.Pipeline.Layers.L7Report;
@@ -15,10 +17,14 @@ builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClient();
+builder.Services.Configure<ApifyOptions>(
+    builder.Configuration.GetSection(ApifyOptions.SectionName));
+builder.Services.AddHttpClient<ApifyCommunityClient>();
 builder.Services.AddSingleton<AdaptiveLayer>();
 builder.Services.AddSingleton<TelemetryIngestLayer>();
 builder.Services.AddSingleton<SemanticAnalyzer>();
 builder.Services.AddSingleton<MetricEngine>();
+builder.Services.AddSingleton<CommunityContextBuilder>();
 builder.Services.AddSingleton<ImpactAnalyzer>();
 builder.Services.AddSingleton<RiskFramer>();
 builder.Services.AddSingleton<ReportGenerator>();
@@ -43,10 +49,15 @@ app.MapPost("/analyze", async (
     IFormFile game_definition,
     IFormFile context_bundle,
     IFormFile? adapter,
+    [FromForm(Name = "community_game_name")] string? communityGameName,
+    [FromForm(Name = "community_max_reviews")] int? communityMaxReviews,
+    [FromForm(Name = "community_language")] string? communityLanguage,
     AdaptiveLayer adaptiveLayer,
     TelemetryIngestLayer telemetryIngestLayer,
     SemanticAnalyzer semanticAnalyzer,
     MetricEngine metricEngine,
+    CommunityContextBuilder communityContextBuilder,
+    ApifyCommunityClient apifyCommunityClient,
     ImpactAnalyzer impactAnalyzer,
     RiskFramer riskFramer,
     ReportGenerator reportGenerator,
@@ -62,10 +73,15 @@ app.MapPost("/analyze", async (
             game_definition,
             context_bundle,
             adapter,
+            communityGameName,
+            communityMaxReviews,
+            communityLanguage,
             adaptiveLayer,
             telemetryIngestLayer,
             semanticAnalyzer,
             metricEngine,
+            communityContextBuilder,
+            apifyCommunityClient,
             impactAnalyzer,
             riskFramer,
             reportGenerator,
@@ -85,12 +101,80 @@ app.MapPost("/analyze", async (
     {
         return Results.BadRequest(new { error = exception.Message });
     }
+    catch (InvalidOperationException exception)
+    {
+        return Results.Problem(exception.Message, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+    catch (HttpRequestException exception)
+    {
+        return Results.Problem(exception.Message, statusCode: StatusCodes.Status502BadGateway);
+    }
+    catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+    {
+        return Results.Problem("Apify Actor run timed out", statusCode: StatusCodes.Status504GatewayTimeout);
+    }
 })
 .WithName("AnalyzePipeline")
 .Accepts<IFormFile>("multipart/form-data")
 .Produces<AnalyzeResponse>()
 .ProducesProblem(StatusCodes.Status400BadRequest)
 .DisableAntiforgery();
+
+app.MapPost("/community/steam/scrape", async (
+    CommunityScrapeRequest request,
+    ApifyCommunityClient apifyCommunityClient,
+    CommunityContextBuilder communityContextBuilder,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        ApifyCommunityResult result = await apifyCommunityClient.ScrapeAsync(
+            request,
+            cancellationToken);
+        var gameDefinition = new GameDefinitionSnapshot
+        {
+            GameId = result.GameName,
+            Entities = Array.Empty<GameEntity>(),
+        };
+        CommunitySnapshot community = new()
+        {
+            Clusters = communityContextBuilder.BuildClusters(
+                gameDefinition,
+                result.Feedback),
+        };
+
+        return Results.Ok(new CommunityScrapeResponse
+        {
+            GameName = result.GameName,
+            RunId = result.RunId,
+            DatasetId = result.DatasetId,
+            ReviewCount = result.Feedback.Count,
+            Community = community,
+        });
+    }
+    catch (ArgumentException exception)
+    {
+        return Results.BadRequest(new { error = exception.Message });
+    }
+    catch (InvalidOperationException exception)
+    {
+        return Results.Problem(exception.Message, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+    catch (HttpRequestException exception)
+    {
+        return Results.Problem(exception.Message, statusCode: StatusCodes.Status502BadGateway);
+    }
+    catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+    {
+        return Results.Problem("Apify Actor run timed out", statusCode: StatusCodes.Status504GatewayTimeout);
+    }
+})
+.WithName("ScrapeSteamCommunityByGameName")
+.Produces<CommunityScrapeResponse>()
+.ProducesProblem(StatusCodes.Status400BadRequest)
+.ProducesProblem(StatusCodes.Status502BadGateway)
+.ProducesProblem(StatusCodes.Status503ServiceUnavailable)
+.ProducesProblem(StatusCodes.Status504GatewayTimeout);
 
 app.MapGet("/analyze/demo", async (
     AdaptiveLayer adaptiveLayer,
@@ -147,10 +231,15 @@ static async Task<IResult> RunPipelineAsync(
     IFormFile gameDefinition,
     IFormFile contextBundle,
     IFormFile? adapter,
+    string? communityGameName,
+    int? communityMaxReviews,
+    string? communityLanguage,
     AdaptiveLayer adaptiveLayer,
     TelemetryIngestLayer telemetryIngestLayer,
     SemanticAnalyzer semanticAnalyzer,
     MetricEngine metricEngine,
+    CommunityContextBuilder communityContextBuilder,
+    ApifyCommunityClient apifyCommunityClient,
     ImpactAnalyzer impactAnalyzer,
     RiskFramer riskFramer,
     ReportGenerator reportGenerator,
@@ -172,10 +261,15 @@ static async Task<IResult> RunPipelineAsync(
         gameDefinitionJson,
         contextBundleJson,
         adapterJson,
+        communityGameName,
+        communityMaxReviews,
+        communityLanguage,
         adaptiveLayer,
         telemetryIngestLayer,
         semanticAnalyzer,
         metricEngine,
+        communityContextBuilder,
+        apifyCommunityClient,
         impactAnalyzer,
         riskFramer,
         reportGenerator,
@@ -215,10 +309,15 @@ static async Task<IResult> RunPipelineFromFilesAsync(
         gameDefinitionJson,
         contextBundleJson,
         adapterJson,
+        communityGameName: null,
+        communityMaxReviews: null,
+        communityLanguage: null,
         adaptiveLayer,
         telemetryIngestLayer,
         semanticAnalyzer,
         metricEngine,
+        communityContextBuilder: null,
+        apifyCommunityClient: null,
         impactAnalyzer,
         riskFramer,
         reportGenerator,
@@ -233,10 +332,15 @@ static async Task<IResult> ExecutePipelineAsync(
     string gameDefinitionJson,
     string contextBundleJson,
     string? adapterJson,
+    string? communityGameName,
+    int? communityMaxReviews,
+    string? communityLanguage,
     AdaptiveLayer adaptiveLayer,
     TelemetryIngestLayer telemetryIngestLayer,
     SemanticAnalyzer semanticAnalyzer,
     MetricEngine metricEngine,
+    CommunityContextBuilder? communityContextBuilder,
+    ApifyCommunityClient? apifyCommunityClient,
     ImpactAnalyzer impactAnalyzer,
     RiskFramer riskFramer,
     ReportGenerator reportGenerator,
@@ -255,6 +359,35 @@ static async Task<IResult> ExecutePipelineAsync(
     MetricResult metric = metricEngine.FromTelemetry(telemetryIngest.Records);
     SemanticResult semantic = semanticAnalyzer.AnalyzeFromMetrics(metric, gameDefinitionJson);
     ContextBundle context = ContextBundleParser.Parse(contextBundleJson);
+    CommunityScrapeResponse? communitySource = null;
+    if (!string.IsNullOrWhiteSpace(communityGameName))
+    {
+        if (communityContextBuilder is null || apifyCommunityClient is null)
+        {
+            throw new InvalidOperationException("Apify community integration is unavailable");
+        }
+
+        var scrapeRequest = new CommunityScrapeRequest
+        {
+            GameName = communityGameName,
+            MaxReviews = communityMaxReviews ?? 100,
+            Language = string.IsNullOrWhiteSpace(communityLanguage)
+                ? "english"
+                : communityLanguage,
+        };
+        ApifyCommunityResult scraped = await apifyCommunityClient.ScrapeAsync(
+            scrapeRequest,
+            cancellationToken);
+        context = communityContextBuilder.Merge(context, scraped.Feedback);
+        communitySource = new CommunityScrapeResponse
+        {
+            GameName = scraped.GameName,
+            RunId = scraped.RunId,
+            DatasetId = scraped.DatasetId,
+            ReviewCount = scraped.Feedback.Count,
+            Community = context.Community,
+        };
+    }
     ImpactResult impact = impactAnalyzer.Analyze(metric, context);
     RiskResult risk = riskFramer.Analyze(impact, context);
     LlmOptions llmOptions = ReadLlmOptions(configuration);
@@ -292,6 +425,23 @@ static async Task<IResult> ExecutePipelineAsync(
         Semantic = semantic,
         Metric = metric,
         Context = context,
+        CommunitySource = communitySource,
+        Impact = impact,
+        Risk = risk,
+        Report = report,
+        Warnings = adapterWarnings
+            .Concat(ingest.Warnings)
+            .Concat(semantic.Warnings)
+            .Concat(context.Warnings)
+            .ToList(),
+    };
+    return Results.Ok(response);
+}
+
+static LlmOptions ReadLlmOptions(IConfiguration configuration) => new()
+{
+    Provider = configuration["Llm:Provider"] ?? "OpenAI",
+    ApiKey = configuration["Llm:ApiKey"],
         Impact = impact,
         Risk = risk,
         Report = report,
@@ -317,8 +467,8 @@ static string ResolveFixtureRoot()
 {
     string[] candidates =
     [
-        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "fixtures", "demo_case")),
-        Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "fixtures", "demo_case")),
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "..", "fixtures", "demo_case")),
+        Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "fixtures", "demo_case")),
         Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "fixtures", "demo_case")),
     ];
 

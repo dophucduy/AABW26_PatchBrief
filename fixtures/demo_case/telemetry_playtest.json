@@ -1,11 +1,8 @@
 {
   "telemetry": [
-    {
-      "hero": "char_A",
-      "bracket": "bronze",
-      "sessions": 40,
-      "wr": 0.50,
-      "pr": 0.30
-    }
+    { "hero": "char_A", "bracket": "bronze", "sessions": 100, "wr": 0.50, "pr": 0.50 },
+    { "hero": "char_B", "bracket": "bronze", "sessions": 100, "wr": 0.50, "pr": 0.50 },
+    { "hero": "char_A", "bracket": "diamond", "sessions": 100, "wr": 0.50, "pr": 0.50 },
+    { "hero": "char_B", "bracket": "diamond", "sessions": 100, "wr": 0.50, "pr": 0.50 }
   ]
 }

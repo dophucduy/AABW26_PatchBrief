@@ -7,18 +7,17 @@
       "sentiment": "negative",
       "sample_quotes": [
         "Ironclad needs buff",
-        "char A useless in ranked",
-        "Why is Ironclad damage so low?"
+        "Ironclad feels weak in ranked"
       ]
     },
     {
       "entity_id": "char_B",
-      "theme": "op_assassin",
+      "theme": "high_skill_pressure",
       "volume": 120,
       "sentiment": "negative",
       "sample_quotes": [
-        "Vex is impossible to deal with in high elo",
-        "Nerf Vex dash cooldown immediately"
+        "Vex is difficult to deal with in high elo",
+        "Vex ultimate is available too often"
       ]
     }
   ]
