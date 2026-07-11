@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" fill="none">
+  <rect width="1280" height="720" fill="#232628"/>
+  <rect x="64" y="64" width="1152" height="592" stroke="#C8C9C2" stroke-width="1"/>
+  <text x="96" y="140" fill="#FF6101" font-family="monospace" font-size="28" font-weight="700">PATCH BRIEF</text>
+  <text x="96" y="200" fill="#F9F6F0" font-family="monospace" font-size="20">Telemetry → Guardrails → Decision Brief</text>
+  <line x1="96" y1="240" x2="1184" y2="240" stroke="#3A3C3E" stroke-width="1"/>
+  <text x="96" y="300" fill="#A0A19B" font-family="monospace" font-size="16">&gt; L0–L7 pipeline demo</text>
+</svg>

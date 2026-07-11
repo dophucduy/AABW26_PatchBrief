@@ -4,15 +4,28 @@ import { getHealth, hasApi, listAdapters, runAnalysis } from './api';
 import { demoReport, requiredFiles } from './data';
 import { MappingDrawer } from './components/MappingDrawer';
 import { CohortDeltaBoard, ReportSnapshot } from './components/ReportVisuals';
-import { TelemetryVisual } from './components/TelemetryVisual';
 import { AppShell, BackLink, Button, Eyebrow, FileSlot, Icon, RiskPill } from './components/Ui';
+import { LandingPage } from './pages/LandingPage';
 import type { AdapterSummary, AnalyzeFiles, AppRoute, MappingStage, PatchReport, Severity } from './types';
 
 const routes: AppRoute[] = ['/', '/analyze', '/analyze/loading', '/report', '/mapping', '/mapping/review', '/mapping/confirm', '/error'];
 
+function reportSectionId(): string | null {
+  const raw = window.location.hash.replace(/^#/, '');
+  return /^section-\d+$/.test(raw) ? raw : null;
+}
+
 function currentRoute(): AppRoute {
-  const path = window.location.hash.replace(/^#/, '') || '/';
+  const raw = window.location.hash.replace(/^#/, '') || '/';
+  if (reportSectionId()) return '/report';
+  const path = raw.startsWith('/') ? raw : `/${raw}`;
   return routes.includes(path as AppRoute) ? path as AppRoute : '/error';
+}
+
+function scrollToReportSection(id: string) {
+  requestAnimationFrame(() => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
 }
 
 function navigate(path: AppRoute) {
@@ -32,78 +45,6 @@ function loadReport() {
   } catch {
     return demoReport;
   }
-}
-
-function HomePage({ onNavigate }: { onNavigate: (path: AppRoute) => void }) {
-  return <div className="home-page">
-    <section className="home-stage page-frame">
-      <div className="home-stage-copy">
-        <Eyebrow>Patch command center</Eyebrow>
-        <h1>Frame the patch<br /><em>before it ships.</em></h1>
-        <p>Bring telemetry, playtests, design rules, and player feedback into one evidence trail. Patch Brief turns the signal into a decision-ready brief.</p>
-        <div className="hero-actions"><Button onClick={() => onNavigate('/analyze')} icon="pulse" iconAfter="arrow-right">Start an analysis</Button><a href="#workflow" className="text-action">See the workflow <Icon name="arrow-right" size={15} /></a></div>
-        <div className="hero-proof"><span><i></i>Evidence-led, not auto-patched</span><span>Designer decides</span></div>
-      </div>
-      <TelemetryVisual />
-    </section>
-
-    <section className="home-orientation page-frame" aria-labelledby="plain-language-title">
-      <div>
-        <Eyebrow>Plain-language overview</Eyebrow>
-        <h2 id="plain-language-title">A balance brief is not<br />an automatic patch.</h2>
-        <p>Patch Brief gives a balance designer one place to examine what the game data says, what playtests show, and where player perception tells a different story. It turns that evidence into a structured brief before any decision is made.</p>
-      </div>
-      <aside className="decision-rule">
-        <span>What stays with your team</span>
-        <strong>You choose the evidence, review the interpretation, and decide what ships.</strong>
-        <ul>
-          <li><Icon name="check" size={15} />No game values are changed automatically.</li>
-          <li><Icon name="check" size={15} />Every recommendation remains a path to test.</li>
-          <li><Icon name="check" size={15} />The final brief keeps the source signals visible.</li>
-        </ul>
-      </aside>
-    </section>
-
-    <section id="workflow" className="command-strip page-frame" aria-label="Patch Brief workflow">
-      <article><span>01</span><div><strong>Set the mapping</strong><p>Select a saved translation for your game data, or create one in the workspace.</p></div></article>
-      <article><span>02</span><div><strong>Load evidence</strong><p>Add live sessions, playtests, game rules, the update plan, and optional player voice.</p></div></article>
-      <article><span>03</span><div><strong>Find the tension</strong><p>Compare cohorts, live behavior, and player perception before reading conclusions.</p></div></article>
-      <article><span>04</span><div><strong>Review the brief</strong><p>Use the risks, options, and validation plan to decide the next design move.</p></div></article>
-    </section>
-
-    <section className="evidence-guide page-frame" aria-labelledby="evidence-guide-title">
-      <div className="evidence-guide-copy">
-        <Eyebrow>What goes in</Eyebrow>
-        <h2 id="evidence-guide-title">Bring the context<br />around the change.</h2>
-        <p>First choose a data mapping so Patch Brief can read your fields consistently. Then load the JSON evidence for the patch under review.</p>
-      </div>
-      <div className="file-ledger" aria-label="Supported evidence files">
-        <article><span>Live behavior</span><strong>player_online.json</strong><p>Telemetry from live sessions.</p></article>
-        <article><span>Playtest behavior</span><strong>player_offline.json</strong><p>Observed test sessions.</p></article>
-        <article><span>Game context</span><strong>game_definition.json + rules.json</strong><p>Roster, roles, stats, and allowed levers.</p></article>
-        <article><span>Planned patch</span><strong>update_plan.json</strong><p>The changes your team is considering.</p></article>
-        <article className="optional"><span>Player voice / optional</span><strong>community.json</strong><p>Sentiment and discussion themes.</p></article>
-      </div>
-      <aside className="brief-return">
-        <span>What comes back</span>
-        <h3>A decision brief you can inspect.</h3>
-        <ol>
-          <li><b>01</b><span>Affected cohorts and proposed changes</span></li>
-          <li><b>02</b><span>Where data, playtest, and community disagree</span></li>
-          <li><b>03</b><span>Risks, testable paths, and a validation plan</span></li>
-        </ol>
-      </aside>
-    </section>
-
-    <section className="outcome-band page-frame">
-      <div className="section-intro"><Eyebrow>Inside every brief</Eyebrow><h2>See the whole patch surface.</h2><p>Structure gives every signal a job: evidence, interpretation, risk, and a next validation step.</p></div>
-      <div className="outcome-grid">
-        <article className="outcome-card cyan"><Icon name="database" size={24} /><span>Evidence map</span><h3>Who absorbs the change?</h3><p>Cohorts, entities, roles, and the size of the impact radius.</p></article>
-        <article className="outcome-card coral"><Icon name="warning" size={24} /><span>Risk frame</span><h3>What could move next?</h3><p>Stakeholder conflict, second-order meta shifts, and identity pressure.</p></article>
-        <article className="outcome-card gold"><Icon name="layers" size={24} /><span>Decision paths</span><h3>What can a designer test?</h3><p>Multiple defensible paths, never an automatic patch command.</p></article>
-      </div>
-    </section>
-  </div>;
 }
 
 interface AnalyzeWorkspaceProps {
@@ -254,7 +195,11 @@ function ReportPage({ onNavigate }: { onNavigate: (path: AppRoute) => void }) {
       <section id="section-4" className="report-section"><SectionHeading index="05" title="Paths, not prescriptions" note="designer decides" /><div className="solution-list">{report.solution_paths.map((path, index) => <article key={path.type}><span>0{index + 1}</span><div><strong>{path.label}</strong><p>{path.rationale}</p></div><b className={path.confidence}>{path.confidence}</b></article>)}</div></section>
       <section id="section-5" className="report-section"><SectionHeading index="06" title="Validation plan" /><ol className="validation-list">{report.validation_plan.map((step, index) => <li key={step}><span>0{index + 1}</span><strong>{step}</strong><Icon name="check" size={16} /></li>)}</ol></section>
       <section className="comms-card"><div><Eyebrow>Draft player comms</Eyebrow><p>{report.draft_player_comms}</p></div><Button variant="outline" onClick={copyDraft} icon={copied ? 'check' : 'copy'}>{copied ? 'Copied' : 'Copy draft'}</Button></section>
-    </article><aside className="report-index"><div><span>Brief index</span>{['Who is affected', 'Proposed changes', 'Where signals disagree', 'Risks to carry forward', 'Paths, not prescriptions', 'Validation plan'].map((label, index) => <a key={label} href={`#section-${index}`}><b>0{index + 1}</b>{label}</a>)}<Button variant="secondary" onClick={() => onNavigate('/analyze')} icon="plus">New analysis</Button></div></aside></div>
+    </article><aside className="report-index"><div><span>Brief index</span>{['Who is affected', 'Proposed changes', 'Where signals disagree', 'Risks to carry forward', 'Paths, not prescriptions', 'Validation plan'].map((label, index) => <button key={label} type="button" className="report-index-link" onClick={() => {
+      const id = `section-${index}`;
+      window.location.hash = id;
+      scrollToReportSection(id);
+    }}><b>0{index + 1}</b>{label}</button>)}<Button variant="secondary" onClick={() => onNavigate('/analyze')} icon="plus">New analysis</Button></div></aside></div>
   </div>;
 }
 
@@ -271,11 +216,17 @@ export default function App() {
   const [route, setRoute] = useState<AppRoute>(currentRoute);
   const [apiOnline, setApiOnline] = useState(false);
   useEffect(() => {
-    const handleRoute = () => setRoute(currentRoute());
+    const handleRoute = () => {
+      setRoute(currentRoute());
+      const sectionId = reportSectionId();
+      if (sectionId) scrollToReportSection(sectionId);
+    };
     window.addEventListener('hashchange', handleRoute);
+    handleRoute();
     return () => window.removeEventListener('hashchange', handleRoute);
   }, []);
   useEffect(() => {
+    if (reportSectionId()) return;
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [route]);
   useEffect(() => {
@@ -285,7 +236,7 @@ export default function App() {
 
   const routeTo = (path: string) => navigate(path as AppRoute);
   let page: ReactElement;
-  if (route === '/') page = <HomePage onNavigate={routeTo} />;
+  if (route === '/') page = <LandingPage onNavigate={routeTo} />;
   else if (route === '/analyze') page = <AnalyzeWorkspace onNavigate={routeTo} />;
   else if (route === '/mapping') page = <AnalyzeWorkspace key="mapping-upload" onNavigate={routeTo} initialMappingStage="upload" />;
   else if (route === '/mapping/review') page = <AnalyzeWorkspace key="mapping-review" onNavigate={routeTo} initialMappingStage="review" />;

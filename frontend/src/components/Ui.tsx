@@ -3,7 +3,8 @@ import type { ButtonHTMLAttributes, ChangeEvent, ReactNode } from 'react';
 
 export type IconName =
   | 'arrow-left' | 'arrow-right' | 'check' | 'chevron-down' | 'close' | 'copy'
-  | 'database' | 'file' | 'layers' | 'plus' | 'pulse' | 'scan' | 'spark' | 'upload' | 'warning';
+  | 'database' | 'file' | 'layers' | 'plus' | 'pulse' | 'scan' | 'spark' | 'upload' | 'warning'
+  | 'shield' | 'chart' | 'brain' | 'book';
 
 interface IconProps {
   name: IconName;
@@ -28,6 +29,10 @@ export function Icon({ name, size = 18, strokeWidth = 1.8 }: IconProps) {
     spark: <><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z" /><path d="m19 16 .7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z" /></>,
     upload: <><path d="M12 16V4" /><path d="m7 9 5-5 5 5" /><path d="M5 20h14" /></>,
     warning: <><path d="m10.3 3.8-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3.2l-8-14a2 2 0 0 0-3.4 0Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></>,
+    shield: <><path d="M12 3 4 7v6c0 5 3.5 8 8 8s8-3 8-8V7l-8-4Z" /><path d="m9 12 2 2 4-4" /></>,
+    chart: <><path d="M4 20V10" /><path d="M10 20V4" /><path d="M16 20v-8" /><path d="M22 20V8" /></>,
+    brain: <><path d="M12 4.5a2.5 2.5 0 0 0-4.96 1.02 2.5 2.5 0 0 0-1.51 4.23A3 3 0 0 0 5 15.5c0 2.5 2 4.5 4.5 4.5h5c2.5 0 4.5-2 4.5-4.5a3 3 0 0 0-2.53-2.75 2.5 2.5 0 0 0-1.51-4.23A2.5 2.5 0 0 0 12 4.5Z" /><path d="M12 9v6" /><path d="M9.5 12h5" /></>,
+    book: <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" /><path d="M8 7h8" /><path d="M8 11h6" /></>,
   };
   return <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
 }
@@ -62,7 +67,8 @@ interface AppShellProps {
 
 export function AppShell({ children, currentPath, apiOnline, onNavigate }: AppShellProps) {
   const isAnalyze = currentPath.startsWith('/analyze') || currentPath.startsWith('/mapping');
-  return <div className="app-shell">
+  const isLanding = currentPath === '/';
+  return <div className={`app-shell${isLanding ? ' app-shell--landing' : ''}`}>
     <header className="topbar">
       <button className="brand" onClick={() => onNavigate('/')} aria-label="Go to Patch Brief home">
         <span className="brand-mark"><i></i><i></i><i></i></span>
