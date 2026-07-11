@@ -3,9 +3,10 @@ import type { ReactElement } from 'react';
 import { getHealth, hasApi, listAdapters, runAnalysis } from './api';
 import { demoReport, requiredFiles } from './data';
 import { MappingDrawer } from './components/MappingDrawer';
+import { CohortDeltaBoard, ReportSnapshot } from './components/ReportVisuals';
 import { TelemetryVisual } from './components/TelemetryVisual';
 import { AppShell, BackLink, Button, Eyebrow, FileSlot, Icon, RiskPill } from './components/Ui';
-import type { AdapterSummary, AnalyzeFiles, AppRoute, MappingStage, PatchReport } from './types';
+import type { AdapterSummary, AnalyzeFiles, AppRoute, MappingStage, PatchReport, Severity } from './types';
 
 const routes: AppRoute[] = ['/', '/analyze', '/analyze/loading', '/report', '/mapping', '/mapping/review', '/mapping/confirm', '/error'];
 
@@ -215,9 +216,24 @@ function LoadingPage({ onNavigate }: { onNavigate: (path: AppRoute) => void }) {
   return <div className="loading-page page-frame"><section className="loading-card"><div className="loading-radar"><Icon name="scan" size={30} /></div><Eyebrow>Pipeline active</Eyebrow><h1>Reading the signal<br /><em>behind the patch.</em></h1><p>Each layer is framing evidence for a human design decision.</p><div className="loading-progress"><span style={{ width: `${((activeStep + 1) / steps.length) * 100}%` }}></span></div><ol>{steps.map((step, index) => <li key={step} className={index < activeStep ? 'done' : index === activeStep ? 'current' : ''}><span>{index < activeStep ? <Icon name="check" size={14} /> : String(index + 1).padStart(2, '0')}</span><strong>{step}</strong>{index === activeStep && <small>working</small>}</li>)}</ol></section></div>;
 }
 
+function reportDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Generated report';
+  return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(date).toUpperCase();
+}
+
+function highestRisk(report: PatchReport): Severity {
+  if (report.overview?.overall_risk) return report.overview.overall_risk;
+  const rank: Record<Severity, number> = { low: 1, medium: 2, high: 3 };
+  return report.risks.reduce<Severity>((current, risk) => rank[risk.severity] > rank[current] ? risk.severity : current, 'low');
+}
+
 function ReportPage({ onNavigate }: { onNavigate: (path: AppRoute) => void }) {
   const report = useMemo(loadReport, []);
   const [copied, setCopied] = useState(false);
+  const primaryEntity = report.who_is_affected.find((entity) => entity.impact === 'high') || report.who_is_affected[0];
+  const overallRisk = highestRisk(report);
+  const isDemo = report.report_mode === 'demo';
   const copyDraft = async () => {
     try {
       await navigator.clipboard.writeText(report.report_markdown || report.draft_player_comms);
@@ -228,12 +244,13 @@ function ReportPage({ onNavigate }: { onNavigate: (path: AppRoute) => void }) {
     }
   };
   return <div className="report-page">
-    <section className="report-hero"><div className="report-hero-frame page-frame"><BackLink label="Back to analyze" onClick={() => onNavigate('/analyze')} /><div className="report-hero-grid"><div className="report-summary"><Eyebrow>Impact brief / {report.report_id}</Eyebrow><h1>Ironclad<br /><em>in the crosshairs.</em></h1><p>{report.executive_summary}</p><div className="report-meta"><span>Generated 11 Jul 2026</span><span></span><b><i></i>{report.llm_used ? 'LLM assisted' : 'Template fallback'}</b></div></div><div className="report-risk"><span>Overall exposure</span><strong>High</strong><RiskPill level="high" /><div className="risk-bars"><i></i><i></i><i></i><i></i></div></div></div></div></section>
+    <section className="report-hero"><div className="report-hero-frame page-frame"><BackLink label="Back to analyze" onClick={() => onNavigate('/analyze')} /><div className="report-hero-grid"><div className="report-summary"><Eyebrow>Impact brief / {report.report_id}</Eyebrow><h1>{primaryEntity?.entity_name || 'Patch'}<br /><em>decision surface.</em></h1><p>{report.executive_summary}</p><div className="report-meta"><span>{reportDate(report.generated_at)}</span><span></span><b><i></i>{isDemo ? 'Demo preview' : report.llm_used ? 'LLM assisted' : 'Template fallback'}</b></div></div><div className="report-risk"><span>Overall exposure</span><strong>{overallRisk}</strong><RiskPill level={overallRisk} /><div className={`risk-bars ${overallRisk}`} aria-label={`${overallRisk} overall risk`}><i></i><i></i><i></i><i></i></div></div></div></div></section>
+    <ReportSnapshot overview={report.overview} entities={report.who_is_affected} />
     <div className="report-layout page-frame"><article className="report-content">
-      <section id="section-0" className="report-section"><SectionHeading index="01" title="Who is affected" note="3 cohorts in frame" /><div className="data-table-wrap"><table className="data-table"><thead><tr><th>Entity / role</th><th>Cohort</th><th>Impact</th><th>Signals</th></tr></thead><tbody>{report.who_is_affected.map((entity) => <tr key={`${entity.entity_id}-${entity.cohort}`}><td><strong>{entity.entity_name}</strong><small>{entity.entity_id} / {entity.role}</small></td><td>{entity.cohort}</td><td><span className={`impact-mark ${entity.impact}`}><i></i>{entity.impact}</span></td><td className="signal-cell">{entity.metric_refs.map((metric) => <span key={metric}>{metric}</span>)}</td></tr>)}</tbody></table></div></section>
-      <section id="section-1" className="report-section"><SectionHeading index="02" title="Proposed changes" note="from update plan" /><div className="change-list">{report.proposed_changes.map((change) => <article key={`${change.target}-${change.field}`}><div><strong>{change.entity_name}</strong><small>{change.role} / {change.target}</small></div><span>{change.field}</span><b>{change.from}<Icon name="arrow-right" size={14} />{change.to}</b><em>{change.delta}</em></article>)}</div></section>
-      <section id="section-2" className="report-section"><SectionHeading index="03" title="Where signals disagree" note="alignment read" /><div className="alignment-grid"><article className="alignment-card divergent"><span>Data versus community</span><strong>{report.alignment.data_vs_community}</strong><p>Player voice is louder than the raw win-rate story.</p></article><article className="alignment-card aligned"><span>Playtest versus live</span><strong>{report.alignment.playtest_vs_live}</strong><p>The current test environment reflects live behavior.</p></article></div><div className="pattern-list">{report.alignment.patterns.map((pattern) => <div key={pattern.id}><Icon name="scan" size={17} /><div><strong>{pattern.title}</strong><span>{pattern.description}</span></div><b className={pattern.confidence}>{pattern.confidence}</b></div>)}</div></section>
-      <section id="section-3" className="report-section"><SectionHeading index="04" title="Risks to carry forward" note="before you lock the patch" /><div className="risk-grid">{report.risks.map((risk) => <article key={risk.id} className={`risk-card ${risk.severity}`}><div><RiskPill level={risk.severity} /><Icon name="warning" size={17} /></div><h3>{risk.title}</h3><ul>{risk.evidence.map((evidence) => <li key={evidence}>{evidence}</li>)}</ul></article>)}</div></section>
+      <section id="section-0" className="report-section"><SectionHeading index="01" title="Cohort delta board" note="compare the numbers first" /><CohortDeltaBoard entities={report.who_is_affected} /></section>
+      <section id="section-1" className="report-section"><SectionHeading index="02" title="Proposed changes" note="from update plan" /><div className="change-board">{report.proposed_changes.map((change) => <article key={`${change.target}-${change.field}`}><header><div><strong>{change.entity_name}</strong><small>{change.role} / {change.target}</small></div><span>{change.field}</span></header><div className="change-values"><b>{change.from}</b><Icon name="arrow-right" size={17} /><b>{change.to}</b><em>{change.delta}</em></div></article>)}</div></section>
+      <section id="section-2" className="report-section"><SectionHeading index="03" title="Signal alignment" note="read evidence side by side" /><div className="alignment-grid"><article className="alignment-card divergent"><span>Data versus community</span><div><strong>{report.alignment.data_vs_community}</strong><b>{report.overview?.community_mentions ?? '—'}<small>{report.overview?.community_mentions === undefined ? '' : ' mentions'}</small></b></div><p>Community signal in the current evidence set.</p></article><article className="alignment-card aligned"><span>Playtest versus live</span><div><strong>{report.alignment.playtest_vs_live}</strong><b>Source read</b></div><p>Numeric delta will appear when the final report supplies it.</p></article></div><div className="pattern-list">{report.alignment.patterns.map((pattern) => <div key={pattern.id}><Icon name="scan" size={17} /><div><strong>{pattern.title}</strong><span>{pattern.description}</span></div><b className={pattern.confidence}>{pattern.confidence}</b></div>)}</div></section>
+      <section id="section-3" className="report-section"><SectionHeading index="04" title="Risks to carry forward" note="before you lock the patch" /><div className="risk-grid">{report.risks.map((risk) => <article key={risk.id} className={`risk-card ${risk.severity}`}><div><RiskPill level={risk.severity} /><span>{risk.evidence.length} signals</span></div><h3>{risk.title}</h3><ul>{risk.evidence.map((evidence) => <li key={evidence}>{evidence}</li>)}</ul></article>)}</div></section>
       <section id="section-4" className="report-section"><SectionHeading index="05" title="Paths, not prescriptions" note="designer decides" /><div className="solution-list">{report.solution_paths.map((path, index) => <article key={path.type}><span>0{index + 1}</span><div><strong>{path.label}</strong><p>{path.rationale}</p></div><b className={path.confidence}>{path.confidence}</b></article>)}</div></section>
       <section id="section-5" className="report-section"><SectionHeading index="06" title="Validation plan" /><ol className="validation-list">{report.validation_plan.map((step, index) => <li key={step}><span>0{index + 1}</span><strong>{step}</strong><Icon name="check" size={16} /></li>)}</ol></section>
       <section className="comms-card"><div><Eyebrow>Draft player comms</Eyebrow><p>{report.draft_player_comms}</p></div><Button variant="outline" onClick={copyDraft} icon={copied ? 'check' : 'copy'}>{copied ? 'Copied' : 'Copy draft'}</Button></section>
@@ -258,6 +275,9 @@ export default function App() {
     window.addEventListener('hashchange', handleRoute);
     return () => window.removeEventListener('hashchange', handleRoute);
   }, []);
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [route]);
   useEffect(() => {
     if (!hasApi) return;
     getHealth().then(() => setApiOnline(true)).catch(() => setApiOnline(false));

@@ -34,7 +34,18 @@ export interface AffectedEntity {
   role: string;
   cohort: string;
   impact: ImpactLevel;
-  metric_refs: string[];
+  metrics?: CohortMetrics;
+}
+
+export interface CohortMetrics {
+  pick_rate?: number;
+  win_rate?: number;
+}
+
+export interface ReportOverview {
+  affected_sessions_percent: number;
+  community_mentions?: number;
+  overall_risk: Severity;
 }
 
 export interface ProposedChange {
@@ -73,6 +84,8 @@ export interface PatchReport {
   report_id: string;
   generated_at: string;
   llm_used: boolean;
+  report_mode?: 'demo' | 'live';
+  overview?: ReportOverview;
   executive_summary: string;
   who_is_affected: AffectedEntity[];
   proposed_changes: ProposedChange[];

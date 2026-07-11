@@ -3,13 +3,19 @@ import type { MappingRow, PatchReport, RequiredFile } from './types';
 export const demoReport: PatchReport = {
   report_id: 'rpt_20260711_001',
   generated_at: '2026-07-11T10:00:00Z',
-  llm_used: true,
+  llm_used: false,
+  report_mode: 'demo',
+  overview: {
+    affected_sessions_percent: 38,
+    community_mentions: 340,
+    overall_risk: 'high',
+  },
   executive_summary:
     'The proposed Ironclad nerf affects 38% of low-bracket sessions. Community perception diverges from the data - likely kit feel, not raw stats. Backlash risk is high if shipped without communication.',
   who_is_affected: [
-    { entity_id: 'char_A', entity_name: 'Ironclad', role: 'Tank', cohort: 'Low bracket', impact: 'high', metric_refs: ['Pick rate 22%', 'Win rate 58%'] },
-    { entity_id: 'char_A', entity_name: 'Ironclad', role: 'Tank', cohort: 'High bracket', impact: 'low', metric_refs: ['Pick rate 18%', 'Win rate 49%'] },
-    { entity_id: 'char_B', entity_name: 'Wisp', role: 'Support', cohort: 'All brackets', impact: 'medium', metric_refs: ['Pick rate 11%', 'Win rate 52%'] },
+    { entity_id: 'char_A', entity_name: 'Ironclad', role: 'Tank', cohort: 'Low bracket', impact: 'high', metrics: { pick_rate: 22, win_rate: 58 } },
+    { entity_id: 'char_A', entity_name: 'Ironclad', role: 'Tank', cohort: 'High bracket', impact: 'low', metrics: { pick_rate: 18, win_rate: 49 } },
+    { entity_id: 'char_B', entity_name: 'Wisp', role: 'Support', cohort: 'All brackets', impact: 'medium', metrics: { pick_rate: 11, win_rate: 52 } },
   ],
   proposed_changes: [
     { target: 'char_A', entity_name: 'Ironclad', field: 'Base damage', from: 45, to: 40, delta: '-11%', role: 'Tank' },
