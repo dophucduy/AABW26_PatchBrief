@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GameBalance.Api/GameBalance.Api.csproj" />
+    <Project Path="src/GameBalance.Pipeline/GameBalance.Pipeline.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GameBalance.Tests/GameBalance.Tests.csproj" />
+  </Folder>
+</Solution>
