@@ -24,4 +24,13 @@ public sealed class IngestResult
     public int AcceptedCount => Events.Count;
 
     public int DiscardedCount => Discarded.Count;
+
+    /// <summary>Telemetry source tags preserved on accepted events.</summary>
+    public IReadOnlyList<string> Sources => Events
+        .Select(item => item.TryGetValue("source", out object? value) ? value?.ToString() : null)
+        .Where(value => !string.IsNullOrWhiteSpace(value))
+        .Select(value => value!)
+        .Distinct(StringComparer.Ordinal)
+        .OrderBy(value => value, StringComparer.Ordinal)
+        .ToList();
 }

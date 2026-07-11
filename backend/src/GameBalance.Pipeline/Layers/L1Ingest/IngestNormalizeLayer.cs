@@ -23,6 +23,28 @@ public sealed class IngestNormalizeLayer
     private const string EntityIdField = "entity_id";
 
     /// <summary>
+    /// Normalize one selected telemetry stream and preserve that source tag for
+    /// every downstream layer.
+    /// </summary>
+    public IngestResult Normalize(
+        IReadOnlyList<Dictionary<string, object?>> events,
+        EventSource source)
+    {
+        var accepted = new List<Dictionary<string, object?>>(events.Count);
+        var discarded = new List<DiscardedEvent>();
+        var warnings = new List<string>();
+
+        Ingest(events, source, accepted, discarded, warnings);
+
+        return new IngestResult
+        {
+            Events = accepted,
+            Discarded = discarded,
+            Warnings = warnings,
+        };
+    }
+
+    /// <summary>
     /// Normalize both event streams into one validated, source-tagged list.
     /// </summary>
     public IngestResult Normalize(

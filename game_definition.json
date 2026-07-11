@@ -1,0 +1,6 @@
+{
+  "brackets": [
+    { "id": "bronze", "label": "Low elo" },
+    { "id": "diamond", "label": "High elo" }
+  ]
+}

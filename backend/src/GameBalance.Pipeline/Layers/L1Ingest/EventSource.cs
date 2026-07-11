@@ -12,6 +12,16 @@ public enum EventSource
 
 public static class EventSourceExtensions
 {
+    /// <summary>Parse the source selected by the user.</summary>
+    public static EventSource ParseTag(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        "online" or "live" => EventSource.Online,
+        "offline" or "playtest" or "test" => EventSource.Offline,
+        _ => throw new ArgumentException(
+            "source must be 'online' (live logs) or 'offline' (playtest data)",
+            nameof(value)),
+    };
+
     /// <summary>The canonical string written into the event's <c>source</c> field.</summary>
     public static string ToTag(this EventSource source) => source switch
     {

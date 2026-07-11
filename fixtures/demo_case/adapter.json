@@ -1,0 +1,10 @@
+{
+  "field_map": {
+    "hero": "entity_id",
+    "time": "timestamp",
+    "rank": "bracket_id",
+    "player": "player_id",
+    "match": "match_id",
+    "event": "event_type"
+  }
+}
