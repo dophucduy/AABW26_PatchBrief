@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+jsonschema
+python-dotenv
+openai
+google-generativeai
+pytest
