@@ -1,0 +1,12 @@
+{
+  "version": "0.4.3",
+  "changes": [
+    {
+      "target": "char_A",
+      "field": "base_damage",
+      "from": 45,
+      "to": 40,
+      "delta": "-11%"
+    }
+  ]
+}

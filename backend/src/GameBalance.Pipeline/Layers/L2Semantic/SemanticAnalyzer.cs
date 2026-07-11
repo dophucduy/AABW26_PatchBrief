@@ -21,12 +21,20 @@ public sealed class SemanticAnalyzer
         IReadOnlyList<Dictionary<string, object?>> events,
         IReadOnlyList<BracketDefinition> brackets)
     {
+        IReadOnlyList<string> sources = events
+            .Select(item => ReadString(item, "source"))
+            .Where(value => value is not null)
+            .Select(value => value!)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(value => value, StringComparer.Ordinal)
+            .ToList();
         var warnings = new List<string>();
         if (brackets.Count == 0)
         {
             warnings.Add("game_definition contains no valid bracket definitions");
             return new SemanticResult
             {
+                Sources = sources,
                 BracketProfiles = Array.Empty<BracketBehaviorProfile>(),
                 BracketEntities = Array.Empty<BracketEntitySummary>(),
                 Patterns = Array.Empty<BehaviorPattern>(),
@@ -56,6 +64,7 @@ public sealed class SemanticAnalyzer
 
         return new SemanticResult
         {
+            Sources = sources,
             BracketProfiles = profiles,
             BracketEntities = combinations,
             Patterns = patterns,

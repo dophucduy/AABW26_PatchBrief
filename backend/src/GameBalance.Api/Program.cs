@@ -3,12 +3,15 @@ using GameBalance.Pipeline.Layers.L0Adaptive;
 using GameBalance.Pipeline.Layers.L1Ingest;
 using GameBalance.Pipeline.Layers.L2Semantic;
 using GameBalance.Pipeline.Layers.L3Metric;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<AdaptiveLayer>();
 builder.Services.AddSingleton<IngestNormalizeLayer>();
 builder.Services.AddSingleton<SemanticAnalyzer>();
@@ -20,13 +23,18 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "GameBalance API v1");
+    });
 }
 
 app.UseHttpsRedirection();
 
 app.MapPost("/analyze", async (
-    IFormFile player_online,
-    IFormFile player_offline,
+    IFormFile player_data,
+    [FromForm] string source,
     IFormFile game_definition,
     IFormFile? adapter,
     AdaptiveLayer adaptiveLayer,
@@ -37,34 +45,31 @@ app.MapPost("/analyze", async (
 {
     try
     {
-        IReadOnlyList<Dictionary<string, object?>> onlineEvents =
-            await JsonUploadParser.ParseEventsAsync(player_online, "player_online", cancellationToken);
-        IReadOnlyList<Dictionary<string, object?>> offlineEvents =
-            await JsonUploadParser.ParseEventsAsync(player_offline, "player_offline", cancellationToken);
+        EventSource selectedSource = EventSourceExtensions.ParseTag(source);
+        IReadOnlyList<Dictionary<string, object?>> rawEvents =
+            await JsonUploadParser.ParseEventsAsync(player_data, "player_data", cancellationToken);
         string gameDefinitionJson = await JsonUploadParser.ReadTextAsync(game_definition, cancellationToken);
         string? adapterJson = adapter is null
             ? null
             : await JsonUploadParser.ReadTextAsync(adapter, cancellationToken);
 
-        var (adaptedOnline, adaptedOffline) = adaptiveLayer.Apply(
-            onlineEvents,
-            offlineEvents,
-            AdapterConfig.Parse(adapterJson));
-        IngestResult ingest = ingestLayer.Normalize(adaptedOnline.Events, adaptedOffline.Events);
+        AdapterResult adapted = adaptiveLayer.Adapt(rawEvents, AdapterConfig.Parse(adapterJson));
+        IngestResult ingest = ingestLayer.Normalize(adapted.Events, selectedSource);
         SemanticResult semantic = semanticAnalyzer.Analyze(ingest.Events, gameDefinitionJson);
         MetricResult metric = metricEngine.Compute(ingest.Events);
 
-        IReadOnlyList<string> adapterWarnings = adaptedOnline.Warnings
-            .Select(warning => $"[online] {warning}")
-            .Concat(adaptedOffline.Warnings.Select(warning => $"[offline] {warning}"))
+        string sourceTag = selectedSource.ToTag();
+        IReadOnlyList<string> adapterWarnings = adapted.Warnings
+            .Select(warning => $"[{sourceTag}] {warning}")
             .ToList();
 
         var response = new AnalyzeResponse
         {
+            SelectedSource = sourceTag,
             Adapter = new AdapterStageResponse
             {
-                OnlineEventCount = adaptedOnline.Events.Count,
-                OfflineEventCount = adaptedOffline.Events.Count,
+                Source = sourceTag,
+                EventCount = adapted.Events.Count,
                 Warnings = adapterWarnings,
             },
             Ingest = ingest,
@@ -90,7 +95,7 @@ app.MapPost("/analyze", async (
         return Results.BadRequest(new { error = exception.Message });
     }
 })
-.WithName("AnalyzeTelemetryL0ToL3")
+.WithName("AnalyzeSelectedTelemetrySourceL0ToL3")
 .Accepts<IFormFile>("multipart/form-data")
 .Produces<AnalyzeResponse>()
 .ProducesProblem(StatusCodes.Status400BadRequest)

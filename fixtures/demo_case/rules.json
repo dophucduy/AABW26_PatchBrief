@@ -1,0 +1,10 @@
+{
+  "char_A": {
+    "locked": ["identity_skill_shield"],
+    "open": ["base_damage", "cooldown_q"]
+  },
+  "char_B": {
+    "locked": ["base_damage"],
+    "open": ["cooldown_ult", "range"]
+  }
+}

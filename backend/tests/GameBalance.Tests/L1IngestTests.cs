@@ -39,6 +39,30 @@ public class L1IngestTests
     }
 
     [Theory]
+    [InlineData(EventSource.Online, "online")]
+    [InlineData(EventSource.Offline, "offline")]
+    public void Single_stream_preserves_selected_source_through_ingest(
+        EventSource source,
+        string expectedTag)
+    {
+        IngestResult result = _layer.Normalize(Events(ValidEvent()), source);
+
+        Assert.Single(result.Events);
+        Assert.Equal(expectedTag, result.Events[0]["source"]);
+        Assert.Equal(new[] { expectedTag }, result.Sources);
+    }
+
+    [Theory]
+    [InlineData("online", EventSource.Online)]
+    [InlineData("live", EventSource.Online)]
+    [InlineData("offline", EventSource.Offline)]
+    [InlineData("playtest", EventSource.Offline)]
+    public void Parses_source_selection_aliases(string value, EventSource expected)
+    {
+        Assert.Equal(expected, EventSourceExtensions.ParseTag(value));
+    }
+
+    [Theory]
     [InlineData("session_start")]
     [InlineData("match_end")]
     [InlineData("death")]

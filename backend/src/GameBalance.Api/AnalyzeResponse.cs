@@ -8,6 +8,9 @@ namespace GameBalance.Api;
 /// <summary>Response contract for the direct L0-L3 analysis workflow.</summary>
 public sealed class AnalyzeResponse
 {
+    [JsonPropertyName("selected_source")]
+    public required string SelectedSource { get; init; }
+
     [JsonPropertyName("l0_adapter")]
     public required AdapterStageResponse Adapter { get; init; }
 
@@ -26,11 +29,11 @@ public sealed class AnalyzeResponse
 
 public sealed class AdapterStageResponse
 {
-    [JsonPropertyName("online_event_count")]
-    public int OnlineEventCount { get; init; }
+    [JsonPropertyName("source")]
+    public required string Source { get; init; }
 
-    [JsonPropertyName("offline_event_count")]
-    public int OfflineEventCount { get; init; }
+    [JsonPropertyName("event_count")]
+    public int EventCount { get; init; }
 
     [JsonPropertyName("warnings")]
     public IReadOnlyList<string> Warnings { get; init; } = Array.Empty<string>();

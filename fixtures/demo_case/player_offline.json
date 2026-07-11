@@ -1,0 +1,14 @@
+[
+  { "event": "session_start", "hero": "char_A", "time": 100, "rank": "bronze", "player": "tester_01", "match": "test_m1" },
+  { "event": "entity_pick", "hero": "char_A", "time": 101, "rank": "bronze", "player": "tester_01", "match": "test_m1" },
+  { "event": "match_end", "hero": "char_A", "time": 500, "rank": "bronze", "player": "tester_01", "match": "test_m1", "result": "win" },
+
+  { "event": "entity_pick", "hero": "char_A", "time": 601, "rank": "diamond", "player": "tester_02", "match": "test_m2" },
+  { "event": "match_end", "hero": "char_A", "time": 1000, "rank": "diamond", "player": "tester_02", "match": "test_m2", "result": "loss" },
+
+  { "event": "entity_pick", "hero": "char_B", "time": 1101, "rank": "bronze", "player": "tester_01", "match": "test_m3" },
+  { "event": "match_end", "hero": "char_B", "time": 1500, "rank": "bronze", "player": "tester_01", "match": "test_m3", "result": "loss" },
+
+  { "event": "entity_pick", "hero": "char_B", "time": 1601, "rank": "diamond", "player": "tester_02", "match": "test_m4" },
+  { "event": "match_end", "hero": "char_B", "time": 2000, "rank": "diamond", "player": "tester_02", "match": "test_m4", "result": "win" }
+]

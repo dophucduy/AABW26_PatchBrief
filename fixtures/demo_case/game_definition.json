@@ -1,0 +1,44 @@
+{
+  "game_id": "arena_moba",
+  "genre": "MOBA",
+  "version": "0.4.2",
+  "brackets": [
+    { "id": "bronze", "label": "Low elo", "min_rating": 0, "max_rating": 999 },
+    { "id": "diamond", "label": "High elo", "min_rating": 1000, "max_rating": 2000 }
+  ],
+  "entities": [
+    {
+      "id": "char_A",
+      "name": "Ironclad",
+      "type": "character",
+      "role": "tank",
+      "tags": ["frontline", "beginner_friendly"],
+      "stats": {
+        "hp": 1200,
+        "base_damage": 45,
+        "cooldown_q": 8
+      },
+      "intentional_difficulty": "easy"
+    },
+    {
+      "id": "char_B",
+      "name": "Vex",
+      "type": "character",
+      "role": "assassin",
+      "tags": ["high_skill_ceiling"],
+      "stats": {
+        "hp": 800,
+        "base_damage": 85,
+        "cooldown_ult": 60
+      },
+      "intentional_difficulty": "hard"
+    }
+  ],
+  "mechanics": [
+    {
+      "id": "dodge",
+      "name": "Dodge roll",
+      "introduced_in": "tutorial"
+    }
+  ]
+}

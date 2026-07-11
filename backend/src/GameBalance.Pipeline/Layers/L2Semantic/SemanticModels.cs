@@ -4,6 +4,9 @@ namespace GameBalance.Pipeline.Layers.L2Semantic;
 
 public sealed class SemanticResult
 {
+    [JsonPropertyName("sources")]
+    public IReadOnlyList<string> Sources { get; init; } = Array.Empty<string>();
+
     [JsonPropertyName("bracket_profiles")]
     public required IReadOnlyList<BracketBehaviorProfile> BracketProfiles { get; init; }
 

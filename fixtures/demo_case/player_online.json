@@ -1,0 +1,58 @@
+[
+  { "event": "session_start", "hero": "char_A", "time": 0, "rank": "bronze", "player": "p_low_01", "match": "m_low_01" },
+  { "event": "entity_pick", "hero": "char_A", "time": 1, "rank": "bronze", "player": "p_low_01", "match": "m_low_01" },
+  { "event": "area_enter", "hero": "char_A", "time": 10, "rank": "bronze", "player": "p_low_01", "match": "m_low_01", "area": "mid_lane" },
+  { "event": "ability_used", "hero": "char_A", "time": 35, "rank": "bronze", "player": "p_low_01", "match": "m_low_01", "ability": "shield" },
+  { "event": "match_end", "hero": "char_A", "time": 600, "rank": "bronze", "player": "p_low_01", "match": "m_low_01", "result": "win" },
+
+  { "event": "entity_pick", "hero": "char_A", "time": 701, "rank": "bronze", "player": "p_low_01", "match": "m_low_02" },
+  { "event": "ability_used", "hero": "char_A", "time": 735, "rank": "bronze", "player": "p_low_01", "match": "m_low_02", "ability": "shield" },
+  { "event": "match_end", "hero": "char_A", "time": 1300, "rank": "bronze", "player": "p_low_01", "match": "m_low_02", "result": "win" },
+
+  { "event": "entity_pick", "hero": "char_A", "time": 1401, "rank": "bronze", "player": "p_low_01", "match": "m_low_03" },
+  { "event": "death", "hero": "char_A", "time": 1580, "rank": "bronze", "player": "p_low_01", "match": "m_low_03" },
+  { "event": "match_end", "hero": "char_A", "time": 2000, "rank": "bronze", "player": "p_low_01", "match": "m_low_03", "result": "win" },
+
+  { "event": "entity_pick", "hero": "char_A", "time": 2101, "rank": "bronze", "player": "p_low_01", "match": "m_low_04" },
+  { "event": "death", "hero": "char_A", "time": 2280, "rank": "bronze", "player": "p_low_01", "match": "m_low_04" },
+  { "event": "match_end", "hero": "char_A", "time": 2700, "rank": "bronze", "player": "p_low_01", "match": "m_low_04", "result": "loss" },
+
+  { "event": "entity_pick", "hero": "char_A", "time": 2801, "rank": "bronze", "player": "p_low_02", "match": "m_low_05" },
+  { "event": "match_end", "hero": "char_A", "time": 3400, "rank": "bronze", "player": "p_low_02", "match": "m_low_05", "result": "win" },
+
+  { "event": "entity_pick", "hero": "char_B", "time": 3501, "rank": "bronze", "player": "p_low_02", "match": "m_low_06" },
+  { "event": "death", "hero": "char_B", "time": 3600, "rank": "bronze", "player": "p_low_02", "match": "m_low_06" },
+  { "event": "match_end", "hero": "char_B", "time": 4100, "rank": "bronze", "player": "p_low_02", "match": "m_low_06", "result": "loss" },
+
+  { "event": "entity_pick", "hero": "char_B", "time": 4201, "rank": "bronze", "player": "p_low_03", "match": "m_low_07" },
+  { "event": "match_end", "hero": "char_B", "time": 4800, "rank": "bronze", "player": "p_low_03", "match": "m_low_07", "result": "loss" },
+
+  { "event": "session_start", "hero": "char_A", "time": 5000, "rank": "diamond", "player": "p_high_01", "match": "m_high_01" },
+  { "event": "entity_pick", "hero": "char_A", "time": 5001, "rank": "diamond", "player": "p_high_01", "match": "m_high_01" },
+  { "event": "death", "hero": "char_A", "time": 5180, "rank": "diamond", "player": "p_high_01", "match": "m_high_01" },
+  { "event": "match_end", "hero": "char_A", "time": 5600, "rank": "diamond", "player": "p_high_01", "match": "m_high_01", "result": "loss" },
+
+  { "event": "entity_pick", "hero": "char_B", "time": 5701, "rank": "diamond", "player": "p_high_01", "match": "m_high_02" },
+  { "event": "ability_used", "hero": "char_B", "time": 5735, "rank": "diamond", "player": "p_high_01", "match": "m_high_02", "ability": "dash" },
+  { "event": "match_end", "hero": "char_B", "time": 6300, "rank": "diamond", "player": "p_high_01", "match": "m_high_02", "result": "win" },
+
+  { "event": "entity_pick", "hero": "char_B", "time": 6401, "rank": "diamond", "player": "p_high_01", "match": "m_high_03" },
+  { "event": "death", "hero": "char_B", "time": 6580, "rank": "diamond", "player": "p_high_01", "match": "m_high_03" },
+  { "event": "match_end", "hero": "char_B", "time": 7000, "rank": "diamond", "player": "p_high_01", "match": "m_high_03", "result": "win" },
+
+  { "event": "entity_pick", "hero": "char_B", "time": 7101, "rank": "diamond", "player": "p_high_01", "match": "m_high_04" },
+  { "event": "death", "hero": "char_B", "time": 7280, "rank": "diamond", "player": "p_high_01", "match": "m_high_04" },
+  { "event": "match_end", "hero": "char_B", "time": 7700, "rank": "diamond", "player": "p_high_01", "match": "m_high_04", "result": "loss" },
+
+  { "event": "entity_pick", "hero": "char_B", "time": 7801, "rank": "diamond", "player": "p_high_02", "match": "m_high_05" },
+  { "event": "match_end", "hero": "char_B", "time": 8400, "rank": "diamond", "player": "p_high_02", "match": "m_high_05", "result": "win" },
+
+  { "event": "entity_pick", "hero": "char_B", "time": 8501, "rank": "diamond", "player": "p_high_02", "match": "m_high_06" },
+  { "event": "match_end", "hero": "char_B", "time": 9100, "rank": "diamond", "player": "p_high_02", "match": "m_high_06", "result": "win" },
+
+  { "event": "entity_pick", "hero": "char_B", "time": 9201, "rank": "diamond", "player": "p_high_02", "match": "m_high_07" },
+  { "event": "match_end", "hero": "char_B", "time": 9800, "rank": "diamond", "player": "p_high_02", "match": "m_high_07", "result": "win" },
+
+  { "event": "entity_pick", "hero": "char_A", "time": 9901, "rank": "diamond", "player": "p_high_02", "match": "m_high_08" },
+  { "event": "match_end", "hero": "char_A", "time": 10500, "rank": "diamond", "player": "p_high_02", "match": "m_high_08", "result": "win" }
+]

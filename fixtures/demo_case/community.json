@@ -1,0 +1,25 @@
+{
+  "clusters": [
+    {
+      "entity_id": "char_A",
+      "theme": "feels_weak",
+      "volume": 340,
+      "sentiment": "negative",
+      "sample_quotes": [
+        "Ironclad needs buff",
+        "char A useless in ranked",
+        "Why is Ironclad damage so low?"
+      ]
+    },
+    {
+      "entity_id": "char_B",
+      "theme": "op_assassin",
+      "volume": 120,
+      "sentiment": "negative",
+      "sample_quotes": [
+        "Vex is impossible to deal with in high elo",
+        "Nerf Vex dash cooldown immediately"
+      ]
+    }
+  ]
+}
