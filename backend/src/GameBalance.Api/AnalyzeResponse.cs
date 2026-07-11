@@ -2,15 +2,16 @@ using System.Text.Json.Serialization;
 using GameBalance.Pipeline.Layers.L1Ingest;
 using GameBalance.Pipeline.Layers.L2Semantic;
 using GameBalance.Pipeline.Layers.L3Metric;
+using GameBalance.Pipeline.Contracts;
+using GameBalance.Pipeline.Layers.L5Impact;
+using GameBalance.Pipeline.Layers.L6Risk;
+using GameBalance.Pipeline.Layers.L7Report;
 
 namespace GameBalance.Api;
 
-/// <summary>Response contract for the direct L0-L3 analysis workflow.</summary>
+/// <summary>Response contract for the full L0-L7 analysis workflow.</summary>
 public sealed class AnalyzeResponse
 {
-    [JsonPropertyName("selected_source")]
-    public required string SelectedSource { get; init; }
-
     [JsonPropertyName("l0_adapter")]
     public required AdapterStageResponse Adapter { get; init; }
 
@@ -23,17 +24,29 @@ public sealed class AnalyzeResponse
     [JsonPropertyName("l3_metric")]
     public required MetricResult Metric { get; init; }
 
+    [JsonPropertyName("l4_context")]
+    public ContextBundle? Context { get; init; }
+
+    [JsonPropertyName("l5_impact")]
+    public ImpactResult? Impact { get; init; }
+
+    [JsonPropertyName("l6_risk")]
+    public RiskResult? Risk { get; init; }
+
+    [JsonPropertyName("l7_report")]
+    public InsightReport? Report { get; init; }
+
     [JsonPropertyName("warnings")]
     public IReadOnlyList<string> Warnings { get; init; } = Array.Empty<string>();
 }
 
 public sealed class AdapterStageResponse
 {
-    [JsonPropertyName("source")]
-    public required string Source { get; init; }
+    [JsonPropertyName("live_record_count")]
+    public int LiveRecordCount { get; init; }
 
-    [JsonPropertyName("event_count")]
-    public int EventCount { get; init; }
+    [JsonPropertyName("playtest_record_count")]
+    public int PlaytestRecordCount { get; init; }
 
     [JsonPropertyName("warnings")]
     public IReadOnlyList<string> Warnings { get; init; } = Array.Empty<string>();

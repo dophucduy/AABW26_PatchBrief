@@ -1,6 +1,36 @@
 @GameBalance.Api_HostAddress = http://localhost:5278
 
-GET {{GameBalance.Api_HostAddress}}/weatherforecast/
+GET {{GameBalance.Api_HostAddress}}/analyze/demo
 Accept: application/json
 
 ###
+
+POST {{GameBalance.Api_HostAddress}}/analyze
+Content-Type: multipart/form-data; boundary=Boundary
+
+--Boundary
+Content-Disposition: form-data; name="telemetry_live"; filename="telemetry_live.json"
+Content-Type: application/json
+
+< ../../fixtures/demo_case/telemetry_live.json
+--Boundary
+Content-Disposition: form-data; name="telemetry_playtest"; filename="telemetry_playtest.json"
+Content-Type: application/json
+
+< ../../fixtures/demo_case/telemetry_playtest.json
+--Boundary
+Content-Disposition: form-data; name="game_definition"; filename="game_definition.json"
+Content-Type: application/json
+
+< ../../fixtures/demo_case/game_definition.json
+--Boundary
+Content-Disposition: form-data; name="context_bundle"; filename="context_bundle.json"
+Content-Type: application/json
+
+< ../../fixtures/demo_case/context_bundle.json
+--Boundary
+Content-Disposition: form-data; name="adapter"; filename="adapter.json"
+Content-Type: application/json
+
+< ../../fixtures/demo_case/adapter.json
+--Boundary--

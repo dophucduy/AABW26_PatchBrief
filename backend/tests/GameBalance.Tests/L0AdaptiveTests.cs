@@ -97,14 +97,14 @@ public class L0AdaptiveTests
     }
 
     [Fact]
-    public void Parse_supports_wrapped_and_bare_shapes()
+    public void Parse_supports_metric_map_and_legacy_field_map()
     {
-        AdapterConfig wrapped = AdapterConfig.Parse("{\"field_map\":{\"hero\":\"entity_id\"}}");
-        AdapterConfig bare = AdapterConfig.Parse("{\"hero\":\"entity_id\"}");
-        AdapterConfig empty = AdapterConfig.Parse(null);
+        AdapterConfig metric = AdapterConfig.Parse("""{"metric_map":{"hero":"entity_id"}}""");
+        AdapterConfig field = AdapterConfig.Parse("""{"field_map":{"hero":"entity_id"}}""");
+        AdapterConfig bare = AdapterConfig.Parse("""{"hero":"entity_id"}""");
 
-        Assert.Equal("entity_id", wrapped.FieldMap["hero"]);
+        Assert.Equal("entity_id", metric.MetricMap["hero"]);
+        Assert.Equal("entity_id", field.FieldMap["hero"]);
         Assert.Equal("entity_id", bare.FieldMap["hero"]);
-        Assert.Empty(empty.FieldMap);
     }
 }

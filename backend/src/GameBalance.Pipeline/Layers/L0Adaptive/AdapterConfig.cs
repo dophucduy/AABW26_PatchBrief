@@ -10,11 +10,11 @@ namespace GameBalance.Pipeline.Layers.L0Adaptive;
 /// Shape:
 /// <code>
 /// {
-///   "field_map": {
-///     "player": "player_id",
-///     "hero":   "entity_id",
-///     "ts":     "timestamp",
-///     "kind":   "event_type"
+///   "metric_map": {
+///     "hero":    "entity_id",
+///     "bracket": "bracket_id",
+///     "wr":      "win_rate",
+///     "pr":      "pick_rate"
 ///   }
 /// }
 /// </code>
@@ -24,6 +24,9 @@ public sealed class AdapterConfig
 {
     [JsonPropertyName("field_map")]
     public Dictionary<string, string> FieldMap { get; init; } = new();
+
+    [JsonPropertyName("metric_map")]
+    public Dictionary<string, string> MetricMap { get; init; } = new();
 
     /// <summary>An empty adapter with no mappings (canonical passthrough).</summary>
     public static AdapterConfig Empty { get; } = new();
@@ -43,16 +46,31 @@ public sealed class AdapterConfig
         using var doc = JsonDocument.Parse(json);
         JsonElement root = doc.RootElement;
 
-        JsonElement mapElement = root;
-        if (root.ValueKind == JsonValueKind.Object &&
-            root.TryGetProperty("field_map", out JsonElement wrapped))
+        Dictionary<string, string> fieldMap = ReadStringMap(root, "field_map");
+        Dictionary<string, string> metricMap = ReadStringMap(root, "metric_map");
+
+        if (fieldMap.Count == 0 && metricMap.Count == 0 && root.ValueKind == JsonValueKind.Object)
         {
-            mapElement = wrapped;
+            fieldMap = ReadStringMap(root, null);
+        }
+
+        return new AdapterConfig { FieldMap = fieldMap, MetricMap = metricMap };
+    }
+
+    private static Dictionary<string, string> ReadStringMap(JsonElement root, string? propertyName)
+    {
+        JsonElement mapElement = root;
+        if (propertyName is not null)
+        {
+            if (!root.TryGetProperty(propertyName, out mapElement))
+            {
+                return new Dictionary<string, string>();
+            }
         }
 
         if (mapElement.ValueKind != JsonValueKind.Object)
         {
-            return Empty;
+            return new Dictionary<string, string>();
         }
 
         var map = new Dictionary<string, string>();
@@ -64,6 +82,6 @@ public sealed class AdapterConfig
             }
         }
 
-        return new AdapterConfig { FieldMap = map };
+        return map;
     }
 }

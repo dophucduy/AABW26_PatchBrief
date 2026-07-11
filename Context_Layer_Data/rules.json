@@ -1,0 +1,444 @@
+{
+  "ruleset_id": "rules_0.4.2",
+  "game_id": "arena_moba",
+  "game_version": "0.4.2",
+  "ruleset_name": "AI Guardrails and Design Constraints",
+  "author": "design_team",
+  "last_updated": "2026-07-11",
+
+  "ai_behavior_rules": {
+    "source_of_truth_order": [
+      "game_definition",
+      "rules",
+      "update_plan",
+      "player_metrics",
+      "community"
+    ],
+    "must_use_game_definition_as_source_of_truth": true,
+    "must_not_invent_missing_entities": true,
+    "must_not_invent_missing_stats": true,
+    "must_not_invent_designer_intent": true,
+    "must_not_override_designer_intent": true,
+    "must_flag_missing_context": true,
+    "must_flag_conflicts_between_sources": true,
+    "must_flag_low_confidence_predictions": true,
+    "must_separate_fact_from_inference": true,
+    "must_explain_assumptions": true,
+    "must_reference_evidence_when_available": true,
+    "must_not_claim_causality_without_supporting_data": true,
+    "must_not_treat_community_opinion_as_ground_truth": true,
+    "must_not_treat_single_metric_as_final_answer": true,
+    "must_compare_update_plan_against_rules": true,
+    "must_compare_update_plan_against_community": true,
+    "must_compare_update_plan_against_player_metrics": true,
+    "must_compare_update_plan_against_game_definition": true,
+    "prediction_policy": {
+      "allow_prediction": true,
+      "allow_exact_review_score_prediction": false,
+      "allow_directional_prediction": true,
+      "allowed_prediction_outputs": [
+        "likely_improve",
+        "likely_worsen",
+        "uncertain",
+        "mixed_impact"
+      ],
+      "must_include_confidence_level": true,
+      "must_include_prediction_reasoning": true,
+      "must_include_prediction_limits": true
+    },
+    "recommendation_policy": {
+      "allow_recommendations": true,
+      "allow_alternative_solutions": true,
+      "allow_patch_scope_reduction_suggestions": true,
+      "allow_ab_test_suggestions": true,
+      "allow_telemetry_request_suggestions": true,
+      "must_not_recommend_locked_lever_changes": true,
+      "must_not_recommend_changes_outside_allowed_levers_when_restricted": true
+    },
+    "conflict_handling": {
+      "if_update_plan_violates_locked_lever": "flag_as_rule_violation",
+      "if_update_plan_conflicts_with_design_constraint": "flag_as_alignment_risk",
+      "if_community_conflicts_with_designer_intent": "explain_tradeoff",
+      "if_metrics_conflict_with_community": "report_both_and_reduce_confidence",
+      "if_required_data_missing": "do_not_guess_and_request_missing_data"
+    }
+  },
+
+  "design_constraints": [
+    {
+      "rule_id": "DES-001",
+      "name": "Role clarity over raw symmetry",
+      "statement": "Each role should preserve its intended gameplay identity even if perfect statistical symmetry is not achieved.",
+      "priority": "high",
+      "applies_to": {
+        "target_types": ["entity"],
+        "roles": ["tank", "dps", "support", "assassin"]
+      },
+      "risk_if_violated": "Characters may feel interchangeable or lose their intended purpose."
+    },
+    {
+      "rule_id": "DES-002",
+      "name": "Tank role identity",
+      "statement": "Tank characters should create space, absorb pressure, and protect allies, but should not outperform damage-focused roles in burst damage.",
+      "priority": "high",
+      "applies_to": {
+        "target_types": ["entity"],
+        "roles": ["tank"]
+      },
+      "preferred_adjustment_direction": [
+        "survivability",
+        "crowd_control",
+        "cooldown",
+        "engage_range",
+        "damage_reduction"
+      ],
+      "discouraged_adjustment_direction": [
+        "burst_damage_increase",
+        "assassin_like_mobility"
+      ],
+      "risk_if_violated": "Tank may become frustrating to fight and blur class identity."
+    },
+    {
+      "rule_id": "DES-003",
+      "name": "Readable combat failure",
+      "statement": "Players should be able to understand why they died or failed during combat.",
+      "priority": "high",
+      "applies_to": {
+        "dimensions": [
+          "combat_readability",
+          "visual_clarity",
+          "enemy_telegraph",
+          "damage_feedback"
+        ]
+      },
+      "preferred_adjustment_direction": [
+        "clearer_warning",
+        "better_vfx_contrast",
+        "improved_hit_feedback",
+        "more consistent timing"
+      ],
+      "discouraged_adjustment_direction": [
+        "hidden_damage_sources",
+        "unclear_vfx",
+        "unreactable_attack_timing"
+      ],
+      "risk_if_violated": "Players may perceive the game as unfair even if balance metrics look healthy."
+    },
+    {
+      "rule_id": "DES-004",
+      "name": "New player onboarding protection",
+      "statement": "Early-game changes should reduce confusion without removing meaningful learning opportunities.",
+      "priority": "medium",
+      "applies_to": {
+        "segments": ["new_player", "low_elo", "casual_player"],
+        "dimensions": [
+          "tutorial",
+          "early_game",
+          "navigation",
+          "combat_readability"
+        ]
+      },
+      "risk_if_violated": "The game may either become too obscure for new players or too over-guided for exploration-focused players."
+    },
+    {
+      "rule_id": "DES-005",
+      "name": "Exploration should remain intentional",
+      "statement": "Map readability improvements should help players orient themselves but should not remove the intended feeling of exploration.",
+      "priority": "medium",
+      "applies_to": {
+        "patch_types": ["map_patch"],
+        "dimensions": [
+          "navigation",
+          "exploration_flow",
+          "player_orientation"
+        ]
+      },
+      "preferred_adjustment_direction": [
+        "landmark_clarity",
+        "better_path_hierarchy",
+        "reduced_unnecessary_backtracking"
+      ],
+      "discouraged_adjustment_direction": [
+        "overly_linear_pathing",
+        "excessive_guidance",
+        "removing_optional_discovery"
+      ],
+      "risk_if_violated": "The level may become easier to navigate but lose mystery, discovery, or replay value."
+    },
+    {
+      "rule_id": "DES-006",
+      "name": "Patch should solve the stated problem",
+      "statement": "A patch should be evaluated against its own patch_goal, not against unrelated improvements.",
+      "priority": "high",
+      "applies_to": {
+        "target_types": ["patch", "change_group", "change"]
+      },
+      "risk_if_violated": "AI may judge a patch positively for improvements that are irrelevant to the actual design goal."
+    }
+  ],
+
+  "locked_levers": [
+    {
+      "rule_id": "LOCK-001",
+      "target_type": "mechanic",
+      "target_id": "dodge",
+      "locked_fields": [
+        "core_function",
+        "input_method",
+        "tutorial_role"
+      ],
+      "reason": "Dodge is a core defensive mechanic taught early and should remain recognizable.",
+      "allowed_minor_adjustments": [
+        "vfx_clarity",
+        "animation_feedback",
+        "sound_feedback"
+      ],
+      "forbidden_recommendations": [
+        "remove_dodge",
+        "replace_dodge_with_passive_defense",
+        "make_dodge_unavailable_to_new_players"
+      ]
+    },
+    {
+      "rule_id": "LOCK-002",
+      "target_type": "role",
+      "target_id": "tank",
+      "locked_fields": [
+        "role_identity"
+      ],
+      "reason": "Tank must remain a frontline space-control role.",
+      "allowed_minor_adjustments": [
+        "hp",
+        "cooldown",
+        "crowd_control_duration",
+        "damage_tuning"
+      ],
+      "forbidden_recommendations": [
+        "turn_tank_into_assassin",
+        "make_tank_primary_burst_damage_role"
+      ]
+    },
+    {
+      "rule_id": "LOCK-003",
+      "target_type": "game_system",
+      "target_id": "core_combat_loop",
+      "locked_fields": [
+        "primary_loop",
+        "combat_readability_requirement"
+      ],
+      "reason": "The core loop should remain skill-based and readable.",
+      "forbidden_recommendations": [
+        "hide_major_damage_sources",
+        "reduce combat feedback",
+        "make failure causes ambiguous"
+      ]
+    },
+    {
+      "rule_id": "LOCK-004",
+      "target_type": "business_rule",
+      "target_id": "monetization_integrity",
+      "locked_fields": [
+        "pay_to_win_advantage"
+      ],
+      "reason": "Patch recommendations must not introduce pay-to-win power advantages.",
+      "forbidden_recommendations": [
+        "sell_stat_advantage",
+        "lock competitive power behind payment",
+        "buff paid-only entities for monetization reasons"
+      ]
+    }
+  ],
+
+  "allowed_levers": [
+    {
+      "target_type": "entity",
+      "target_id": "char_A",
+      "allowed_fields": [
+        "stats.base_damage",
+        "stats.hp",
+        "stats.cooldown_q",
+        "stats.movement_speed",
+        "ability.q.damage",
+        "ability.q.cooldown"
+      ],
+      "allowed_change_types": [
+        "buff",
+        "nerf",
+        "minor_rework"
+      ],
+      "requires_risk_note": true,
+      "requires_metric_support": true
+    },
+    {
+      "target_type": "entity",
+      "target_id": "char_B",
+      "allowed_fields": [
+        "stats.base_damage",
+        "stats.hp",
+        "stats.cooldown_q",
+        "ability.cooldown",
+        "ability.damage"
+      ],
+      "allowed_change_types": [
+        "buff",
+        "nerf",
+        "minor_rework"
+      ],
+      "requires_risk_note": true,
+      "requires_metric_support": true
+    },
+    {
+      "target_type": "mechanic",
+      "target_id": "enemy_aoe_warning",
+      "allowed_fields": [
+        "warning_duration_ms",
+        "vfx_contrast",
+        "indicator_size",
+        "sound_cue_timing"
+      ],
+      "allowed_change_types": [
+        "visual_clarity_update",
+        "accessibility_visual_update",
+        "combat_readability_update"
+      ],
+      "requires_risk_note": true,
+      "requires_metric_support": false
+    },
+    {
+      "target_type": "level",
+      "target_id": "forest_ruins",
+      "allowed_fields": [
+        "critical_path_length",
+        "checkpoint_spacing",
+        "landmark_visibility",
+        "optional_path_count",
+        "boss_arena_area",
+        "cover_count",
+        "choke_point_count",
+        "lighting_readability"
+      ],
+      "allowed_change_types": [
+        "level_layout_update",
+        "navigation_readability_update",
+        "combat_space_update",
+        "visual_clarity_update",
+        "environment_art_update"
+      ],
+      "requires_risk_note": true,
+      "requires_measurement_summary": true
+    },
+    {
+      "target_type": "map_area",
+      "target_id": "forest_ruins_mid_path",
+      "allowed_fields": [
+        "route_visibility",
+        "prop_density",
+        "landmark_count",
+        "dead_end_count",
+        "main_route_length",
+        "side_path_length"
+      ],
+      "allowed_change_types": [
+        "navigation_readability_update",
+        "level_layout_update",
+        "environment_art_update"
+      ],
+      "requires_risk_note": true,
+      "requires_measurement_summary": true
+    }
+  ],
+
+  "output_constraints": {
+    "report_must_include": [
+      "patch_summary",
+      "rule_alignment",
+      "community_alignment",
+      "metric_alignment",
+      "affected_segments",
+      "main_risks",
+      "confidence_level",
+      "evidence_summary",
+      "recommended_next_steps"
+    ],
+    "report_should_include": [
+      "alternative_solution_paths",
+      "missing_data_warnings",
+      "tradeoff_analysis",
+      "suggested_ab_test",
+      "suggested_telemetry_to_collect"
+    ],
+    "must_not_include": [
+      "unsupported_exact_review_score_prediction",
+      "claim_that_ai_knows_player_intent_without_evidence",
+      "recommendation_that_violates_locked_levers",
+      "recommendation_that_ignores_game_definition",
+      "unsupported_claim_of_causality"
+    ],
+    "confidence_policy": {
+      "allowed_values": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "must_explain_confidence_reason": true,
+      "confidence_should_drop_when": [
+        "community_sample_size_is_small",
+        "player_metrics_are_missing",
+        "update_plan_has_no_design_intent",
+        "target_id_does_not_match_game_definition",
+        "metrics_and_community_conflict",
+        "measurement_summary_is_estimated_only"
+      ]
+    },
+    "risk_policy": {
+      "risk_levels": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "must_flag_critical_when": [
+        "locked_lever_is_changed",
+        "patch_conflicts_with_high_priority_design_constraint",
+        "target_id_missing_from_game_definition",
+        "patch_may_harm_primary_target_audience"
+      ],
+      "must_include_risk_reason": true
+    },
+    "prediction_output_format": {
+      "allowed_review_prediction_types": [
+        "directional",
+        "range_estimate",
+        "not_enough_data"
+      ],
+      "forbidden_review_prediction_types": [
+        "single_exact_percentage_without_range",
+        "single_exact_score_without_confidence",
+        "claim_of_certainty"
+      ],
+      "required_fields_when_predicting": [
+        "predicted_direction",
+        "confidence_level",
+        "supporting_evidence",
+        "assumptions",
+        "failure_cases"
+      ]
+    },
+    "recommendation_output_format": {
+      "must_group_recommendations_by": [
+        "safe_to_apply",
+        "needs_playtest",
+        "high_risk",
+        "blocked_by_rules"
+      ],
+      "must_include_for_each_recommendation": [
+        "recommendation",
+        "target_id",
+        "reason",
+        "expected_effect",
+        "risk",
+        "required_evidence"
+      ]
+    }
+  }
+}

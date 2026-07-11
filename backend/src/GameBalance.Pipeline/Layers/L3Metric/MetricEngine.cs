@@ -3,6 +3,47 @@ namespace GameBalance.Pipeline.Layers.L3Metric;
 /// <summary>L3 - computes entity metrics by bracket and telemetry source.</summary>
 public sealed class MetricEngine
 {
+    /// <summary>Build metrics directly from structured telemetry rows produced by L1.</summary>
+    public MetricResult FromTelemetry(IReadOnlyList<Dictionary<string, object?>> records)
+    {
+        var metrics = new SortedDictionary<string, IReadOnlyDictionary<string, CohortMetrics>>(
+            StringComparer.Ordinal);
+
+        foreach (IGrouping<string, Dictionary<string, object?>> entity in records
+                     .GroupBy(row => ReadString(row, "entity_id")!)
+                     .Where(group => group.Key is not null))
+        {
+            var brackets = new SortedDictionary<string, CohortMetrics>(StringComparer.Ordinal);
+            foreach (IGrouping<string, Dictionary<string, object?>> bracket in entity
+                         .GroupBy(row => ReadString(row, "bracket_id")!)
+                         .Where(group => group.Key is not null))
+            {
+                var sources = new SortedDictionary<string, SourceMetrics>(StringComparer.Ordinal);
+                foreach (Dictionary<string, object?> row in bracket)
+                {
+                    string source = NormalizeSource(ReadString(row, "source")) ?? "online";
+                    sources[source] = ReadSourceMetrics(row);
+                }
+
+                sources.TryGetValue("online", out SourceMetrics? online);
+                sources.TryGetValue("offline", out SourceMetrics? offline);
+                brackets[bracket.Key] = new CohortMetrics
+                {
+                    EntityId = entity.Key,
+                    BracketId = bracket.Key,
+                    Sources = sources,
+                    Comparison = online is not null && offline is not null
+                        ? Compare(online, offline)
+                        : null,
+                };
+            }
+
+            metrics[entity.Key] = brackets;
+        }
+
+        return new MetricResult { Metrics = metrics };
+    }
+
     public MetricResult Compute(IReadOnlyList<Dictionary<string, object?>> events)
     {
         List<MetricEvent> normalized = events
@@ -146,6 +187,57 @@ public sealed class MetricEngine
         "offline" or "playtest" => "offline",
         _ => null,
     };
+
+    private static SourceMetrics ReadSourceMetrics(Dictionary<string, object?> row)
+    {
+        int? sessions = ReadInt(row, "sessions");
+        return new SourceMetrics
+        {
+            EventCount = sessions ?? 0,
+            MatchCount = sessions ?? 0,
+            PickCount = 0,
+            DeathCount = 0,
+            WinRate = ReadDouble(row, "win_rate"),
+            PickRate = ReadDouble(row, "pick_rate"),
+            DeathRate = ReadDouble(row, "death_rate"),
+        };
+    }
+
+    private static int? ReadInt(Dictionary<string, object?> row, string key)
+    {
+        if (!row.TryGetValue(key, out object? value) || value is null)
+        {
+            return null;
+        }
+
+        return value switch
+        {
+            int i => i,
+            long l => (int)l,
+            double d => (int)d,
+            string s when int.TryParse(s, out int parsed) => parsed,
+            _ => null,
+        };
+    }
+
+    private static double? ReadDouble(Dictionary<string, object?> row, string key)
+    {
+        if (!row.TryGetValue(key, out object? value) || value is null)
+        {
+            return null;
+        }
+
+        return value switch
+        {
+            double d => d,
+            float f => f,
+            int i => i,
+            long l => l,
+            decimal m => (double)m,
+            string s when double.TryParse(s, out double parsed) => parsed,
+            _ => null,
+        };
+    }
 
     private static bool? ReadWinOutcome(Dictionary<string, object?> ev)
     {

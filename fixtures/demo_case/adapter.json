@@ -1,10 +1,9 @@
 {
-  "field_map": {
+  "metric_map": {
     "hero": "entity_id",
-    "time": "timestamp",
-    "rank": "bracket_id",
-    "player": "player_id",
-    "match": "match_id",
-    "event": "event_type"
+    "bracket": "bracket_id",
+    "wr": "win_rate",
+    "pr": "pick_rate",
+    "dr": "death_rate"
   }
 }

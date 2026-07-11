@@ -1,4 +1,5 @@
 using System.Globalization;
+using GameBalance.Pipeline.Layers.L3Metric;
 
 namespace GameBalance.Pipeline.Layers.L2Semantic;
 
@@ -16,6 +17,57 @@ public sealed class SemanticAnalyzer
         IReadOnlyList<Dictionary<string, object?>> events,
         string gameDefinitionJson) =>
         Analyze(events, BracketDefinition.ParseGameDefinition(gameDefinitionJson));
+
+    /// <summary>Derive bracket summaries from structured telemetry metrics.</summary>
+    public SemanticResult AnalyzeFromMetrics(MetricResult metrics, string gameDefinitionJson)
+    {
+        IReadOnlyList<BracketDefinition> brackets = BracketDefinition.ParseGameDefinition(gameDefinitionJson);
+        var warnings = new List<string>();
+        if (brackets.Count == 0)
+        {
+            warnings.Add("game_definition contains no valid bracket definitions");
+            return new SemanticResult
+            {
+                Sources = ["online", "offline"],
+                BracketProfiles = Array.Empty<BracketBehaviorProfile>(),
+                BracketEntities = Array.Empty<BracketEntitySummary>(),
+                Patterns = Array.Empty<BehaviorPattern>(),
+                Warnings = warnings,
+            };
+        }
+
+        var combinations = new List<BracketEntitySummary>();
+        foreach ((string entityId, IReadOnlyDictionary<string, CohortMetrics> cohorts) in metrics.Metrics)
+        {
+            foreach ((string bracketId, CohortMetrics cohort) in cohorts)
+            {
+                cohort.Sources.TryGetValue("online", out SourceMetrics? online);
+                combinations.Add(new BracketEntitySummary
+                {
+                    BracketId = bracketId,
+                    EntityId = entityId,
+                    EventCount = online?.MatchCount ?? 0,
+                    PickShare = online?.PickRate ?? 0,
+                    WinRate = online?.WinRate,
+                    LowConfidence = (online?.MatchCount ?? 0) < LowConfidenceEventThreshold,
+                });
+            }
+        }
+
+        IReadOnlyList<BracketEntitySummary> bracketEntities = combinations
+            .OrderBy(item => item.BracketId, StringComparer.Ordinal)
+            .ThenBy(item => item.EntityId, StringComparer.Ordinal)
+            .ToList();
+
+        return new SemanticResult
+        {
+            Sources = ["online", "offline"],
+            BracketProfiles = Array.Empty<BracketBehaviorProfile>(),
+            BracketEntities = bracketEntities,
+            Patterns = FindBracketSplits(bracketEntities).ToList(),
+            Warnings = warnings,
+        };
+    }
 
     public SemanticResult Analyze(
         IReadOnlyList<Dictionary<string, object?>> events,

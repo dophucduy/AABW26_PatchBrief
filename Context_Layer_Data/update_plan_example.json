@@ -1,0 +1,145 @@
+{
+	"patch_id": "patch_0.4.3",
+	"base_game_version": "0.4.2",
+	"patch_title": "Tank Role Adjustment",
+	"patch_type": "mechanic_patch",
+	"patch_goal": "Improve role clarity and reduce frustration",
+	"author": "design_team",
+	"changes": [
+		{
+			"change_id": "CHG-001",
+			"change_category": "mechanic",
+			"change_type": "nerf",
+			"target_type": "entity",
+			"target_id": "char_A",
+			"summary": "Reduce char_A base damage from 45 to 40.",
+			"design_intent": "Reduce burst damage from a tank character.",
+			"affected_dimensions": [
+				"combat_balance",
+				"role_clarity",
+				"new_player_frustration"
+			],
+			"numeric_changes": [
+				{
+					"field": "stats.base_damage",
+					"value_type": "number",
+					"unit": "damage",
+					"before": 45,
+					"after": 40,
+					"delta_percent": -11.1
+				}
+			],
+			"expected_player_impact": {
+				"affected_segments": [
+					"new_player",
+					"low_elo"
+				],
+				"expected_direction": "less frustration when fighting char_A"
+			},
+			"expected_metric_direction": [
+				{
+					"metric": "early_game_kill_rate",
+					"direction": "decrease"
+				},
+				{
+					"metric": "complaints_about_tank_burst",
+					"direction": "decrease"
+				}
+			],
+			"priority": "must_have"
+		}
+	]
+}
+
+{
+	"patch_id": "patch_0.4.3",
+	"base_game_version": "0.4.2",
+	"patch_title": "Forest Ruins Navigation Update",
+	"patch_type": "map_patch",
+	"patch_goal": "Reduce navigation confusion and shorten unnecessary backtracking.",
+	"author": "design_team",
+	"changes": [
+		{
+			"change_id": "CHG-MAP-001",
+			"change_category": "map",
+			"change_type": "navigation_readability_update",
+			"target_type": "level",
+			"target_id": "forest_ruins",
+			"summary": "Reduce navigation confusion and shorten unnecessary backtracking.",
+			"design_intent": "Help new players reach the objective with fewer wrong turns.",
+			"affected_dimensions": [
+				"navigation",
+				"pacing",
+				"new_player_onboarding"
+			],
+			"measurement_summary": {
+				"availability": "measured",
+				"measurement_source": "designer_walkthrough",
+				"metrics": [
+					{
+						"metric_id": "MET-001",
+						"name": "start_to_objective_time",
+						"value_type": "duration",
+						"unit": "seconds",
+						"before": 210,
+						"after": 165,
+						"delta_percent": -21.4,
+						"why_it_matters": "Shorter route may reduce early-game navigation frustration."
+					},
+					{
+						"metric_id": "MET-002",
+						"name": "checkpoint_to_boss_time",
+						"value_type": "duration",
+						"unit": "seconds",
+						"before": 75,
+						"after": 52,
+						"delta_percent": -30.7,
+						"why_it_matters": "Shorter recovery time may reduce frustration after repeated boss deaths."
+					},
+					{
+						"metric_id": "MET-003",
+						"name": "main_route_length",
+						"value_type": "distance",
+						"unit": "meters",
+						"before": 340,
+						"after": 285,
+						"delta_percent": -16.2,
+						"why_it_matters": "Shorter critical path may improve pacing."
+					},
+					{
+						"metric_id": "MET-004",
+						"name": "boss_arena_area",
+						"value_type": "area",
+						"unit": "square_meters",
+						"before": 420,
+						"after": 510,
+						"delta_percent": 21.4,
+						"why_it_matters": "Larger arena may give players more room to dodge boss attacks."
+					}
+				]
+			},
+			"expected_player_impact": {
+				"affected_segments": [
+					"new_player",
+					"casual_player"
+				],
+				"expected_direction": "less confusion and less frustration when navigating forest_ruins"
+			},
+			"expected_metric_direction": [
+				{
+					"metric": "backtracking_rate",
+					"direction": "decrease"
+				},
+				{
+					"metric": "time_to_objective",
+					"direction": "decrease"
+				},
+				{
+					"metric": "death_recovery_frustration",
+					"direction": "decrease"
+				}
+			],
+			"priority": "must_have"
+		}
+	]
+}

@@ -5,79 +5,48 @@ using GameBalance.Pipeline.Layers.L3Metric;
 
 namespace GameBalance.Tests;
 
-/// <summary>Verifies the API's direct L0 -> L1 -> L2/L3 call sequence.</summary>
+/// <summary>Verifies the API's structured telemetry path through L0 -> L1 -> L2/L3.</summary>
 public class PipelineWorkflowTests
 {
     [Fact]
-    public void Runs_raw_online_and_offline_events_through_l0_to_l3()
+    public void Runs_structured_telemetry_through_l0_to_l3()
     {
-        var online = new List<Dictionary<string, object?>>
-        {
-            RawEvent("Pick", "hero_A", 1, "online-1"),
-            RawEvent("End", "hero_A", 2, "online-1", "win"),
-        };
-        var offline = new List<Dictionary<string, object?>>
-        {
-            RawEvent("Pick", "hero_A", 1, "offline-1"),
-            RawEvent("End", "hero_A", 2, "offline-1", "loss"),
-        };
-        var adapter = new AdapterConfig
-        {
-            FieldMap = new()
+        const string live = """
             {
-                ["kind"] = "event_type",
-                ["hero"] = "entity_id",
-                ["time"] = "timestamp",
-            },
-        };
+              "telemetry": [
+                { "entity_id": "char_A", "bracket_id": "bronze", "sessions": 100, "win_rate": 1.0, "pick_rate": 1.0 },
+                { "entity_id": "char_B", "bracket_id": "bronze", "sessions": 100, "win_rate": 0.0, "pick_rate": 0.0 }
+              ]
+            }
+            """;
+        const string playtest = """
+            {
+              "telemetry": [
+                { "entity_id": "char_A", "bracket_id": "bronze", "sessions": 100, "win_rate": 0.0, "pick_rate": 1.0 }
+              ]
+            }
+            """;
 
         var adaptiveLayer = new AdaptiveLayer();
-        var ingestLayer = new IngestNormalizeLayer();
+        var telemetryIngestLayer = new TelemetryIngestLayer();
         var semanticAnalyzer = new SemanticAnalyzer();
         var metricEngine = new MetricEngine();
 
-        var (adaptedOnline, adaptedOffline) = adaptiveLayer.Apply(online, offline, adapter);
-        IngestResult ingest = ingestLayer.Normalize(adaptedOnline.Events, adaptedOffline.Events);
-        SemanticResult semantic = semanticAnalyzer.Analyze(ingest.Events, GameDefinition);
-        MetricResult metric = metricEngine.Compute(ingest.Events);
+        var (adaptedLive, adaptedPlaytest) = adaptiveLayer.ApplyTelemetry(live, playtest, null);
+        TelemetryIngestResult ingest = telemetryIngestLayer.Normalize(
+            adaptedLive.Records,
+            adaptedPlaytest.Records);
+        MetricResult metric = metricEngine.FromTelemetry(ingest.Records);
+        SemanticResult semantic = semanticAnalyzer.AnalyzeFromMetrics(metric, GameDefinition);
 
-        Assert.Equal(4, ingest.AcceptedCount);
+        Assert.Equal(3, ingest.AcceptedCount);
         Assert.Contains(semantic.BracketEntities, item =>
-            item.BracketId == "bronze" && item.EntityId == "hero_A");
+            item.BracketId == "bronze" && item.EntityId == "char_A");
 
-        CohortMetrics cohort = metric.Metrics["hero_A"]["bronze"];
+        CohortMetrics cohort = metric.Metrics["char_A"]["bronze"];
         Assert.Equal(1.0, cohort.Sources["online"].WinRate);
         Assert.Equal(0.0, cohort.Sources["offline"].WinRate);
         Assert.Equal(-1.0, cohort.Comparison!.WinRateDelta);
-    }
-
-    private static Dictionary<string, object?> RawEvent(
-        string kind,
-        string hero,
-        int time,
-        string matchId,
-        string? result = null)
-    {
-        var value = new Dictionary<string, object?>
-        {
-            ["kind"] = kind switch
-            {
-                "Pick" => "entity_pick",
-                "End" => "match_end",
-                _ => kind,
-            },
-            ["hero"] = hero,
-            ["time"] = time,
-            ["bracket_id"] = "bronze",
-            ["player_id"] = "player-1",
-            ["match_id"] = matchId,
-        };
-        if (result is not null)
-        {
-            value["result"] = result;
-        }
-
-        return value;
     }
 
     private const string GameDefinition = """

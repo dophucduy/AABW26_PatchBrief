@@ -1,0 +1,83 @@
+{
+  "game_definition": {
+    "game_id": "arena_moba",
+    "genre": "MOBA",
+    "version": "0.4.2",
+    "brackets": [
+      { "id": "bronze", "label": "Low elo" },
+      { "id": "diamond", "label": "High elo" }
+    ],
+    "entities": [
+      {
+        "id": "char_A",
+        "name": "Ironclad",
+        "type": "character",
+        "role": "tank",
+        "tags": ["frontline", "beginner_friendly"],
+        "stats": {
+          "hp": 1200,
+          "base_damage": 45,
+          "cooldown_q": 8
+        },
+        "intentional_difficulty": "easy"
+      },
+      {
+        "id": "char_B",
+        "name": "Vex",
+        "type": "character",
+        "role": "assassin",
+        "tags": ["high_skill_ceiling"],
+        "stats": { "hp": 800, "base_damage": 85 }
+      }
+    ]
+  },
+  "rules": {
+    "char_A": {
+      "locked": ["identity_skill_shield"],
+      "open": ["base_damage", "cooldown_q"]
+    },
+    "char_B": {
+      "locked": ["base_damage"],
+      "open": ["cooldown_ult", "range"]
+    }
+  },
+  "update_plan": {
+    "version": "0.4.3",
+    "changes": [
+      {
+        "target": "char_A",
+        "field": "base_damage",
+        "from": 45,
+        "to": 40,
+        "delta": "-11%"
+      }
+    ]
+  },
+  "community": {
+    "clusters": [
+      {
+        "entity_id": "char_A",
+        "theme": "feels_weak",
+        "volume": 340,
+        "sentiment": "negative",
+        "sample_quotes": [
+          "Ironclad needs buff",
+          "char A useless in ranked"
+        ]
+      }
+    ]
+  },
+  "joined_changes": [
+    {
+      "entity_id": "char_A",
+      "entity_name": "Ironclad",
+      "role": "tank",
+      "field": "base_damage",
+      "from": 45,
+      "to": 40,
+      "delta": "-11%",
+      "lever_status": "open"
+    }
+  ],
+  "warnings": []
+}

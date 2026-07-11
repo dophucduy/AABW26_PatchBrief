@@ -8,6 +8,24 @@ public class L3MetricTests
     private readonly MetricEngine _engine = new();
 
     [Fact]
+    public void FromTelemetry_builds_metrics_by_entity_bracket_and_source()
+    {
+        var records = new List<Dictionary<string, object?>>
+        {
+            TelemetryRow("char_A", "bronze", "online", 0.58, 0.22),
+            TelemetryRow("char_A", "bronze", "offline", 0.50, 0.30),
+            TelemetryRow("char_A", "diamond", "online", 0.49, 0.18),
+        };
+
+        MetricResult result = _engine.FromTelemetry(records);
+
+        CohortMetrics bronze = result.Metrics["char_A"]["bronze"];
+        Assert.Equal(0.58, bronze.Sources["online"].WinRate);
+        Assert.Equal(0.50, bronze.Sources["offline"].WinRate);
+        Assert.Equal(-0.08, bronze.Comparison!.WinRateDelta!.Value, precision: 5);
+    }
+
+    [Fact]
     public void Computes_metrics_by_entity_bracket_and_source_with_comparison()
     {
         var events = new List<Dictionary<string, object?>>
@@ -107,4 +125,19 @@ public class L3MetricTests
         if (result is not null) value["result"] = result;
         return value;
     }
+
+    private static Dictionary<string, object?> TelemetryRow(
+        string entity,
+        string bracket,
+        string source,
+        double winRate,
+        double pickRate) => new()
+    {
+        ["entity_id"] = entity,
+        ["bracket_id"] = bracket,
+        ["source"] = source,
+        ["sessions"] = 100,
+        ["win_rate"] = winRate,
+        ["pick_rate"] = pickRate,
+    };
 }

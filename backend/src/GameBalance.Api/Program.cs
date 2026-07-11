@@ -1,25 +1,30 @@
 using GameBalance.Api;
+using GameBalance.Pipeline.Contracts;
 using GameBalance.Pipeline.Layers.L0Adaptive;
 using GameBalance.Pipeline.Layers.L1Ingest;
 using GameBalance.Pipeline.Layers.L2Semantic;
 using GameBalance.Pipeline.Layers.L3Metric;
+using GameBalance.Pipeline.Layers.L5Impact;
+using GameBalance.Pipeline.Layers.L6Risk;
+using GameBalance.Pipeline.Layers.L7Report;
 using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddHttpClient();
 builder.Services.AddSingleton<AdaptiveLayer>();
-builder.Services.AddSingleton<IngestNormalizeLayer>();
+builder.Services.AddSingleton<TelemetryIngestLayer>();
 builder.Services.AddSingleton<SemanticAnalyzer>();
 builder.Services.AddSingleton<MetricEngine>();
+builder.Services.AddSingleton<ImpactAnalyzer>();
+builder.Services.AddSingleton<RiskFramer>();
+builder.Services.AddSingleton<ReportGenerator>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -33,54 +38,40 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.MapPost("/analyze", async (
-    IFormFile player_data,
-    [FromForm] string source,
+    IFormFile telemetry_live,
+    IFormFile telemetry_playtest,
     IFormFile game_definition,
+    IFormFile context_bundle,
     IFormFile? adapter,
     AdaptiveLayer adaptiveLayer,
-    IngestNormalizeLayer ingestLayer,
+    TelemetryIngestLayer telemetryIngestLayer,
     SemanticAnalyzer semanticAnalyzer,
     MetricEngine metricEngine,
+    ImpactAnalyzer impactAnalyzer,
+    RiskFramer riskFramer,
+    ReportGenerator reportGenerator,
+    IHttpClientFactory httpClientFactory,
+    IConfiguration configuration,
     CancellationToken cancellationToken) =>
 {
     try
     {
-        EventSource selectedSource = EventSourceExtensions.ParseTag(source);
-        IReadOnlyList<Dictionary<string, object?>> rawEvents =
-            await JsonUploadParser.ParseEventsAsync(player_data, "player_data", cancellationToken);
-        string gameDefinitionJson = await JsonUploadParser.ReadTextAsync(game_definition, cancellationToken);
-        string? adapterJson = adapter is null
-            ? null
-            : await JsonUploadParser.ReadTextAsync(adapter, cancellationToken);
-
-        AdapterResult adapted = adaptiveLayer.Adapt(rawEvents, AdapterConfig.Parse(adapterJson));
-        IngestResult ingest = ingestLayer.Normalize(adapted.Events, selectedSource);
-        SemanticResult semantic = semanticAnalyzer.Analyze(ingest.Events, gameDefinitionJson);
-        MetricResult metric = metricEngine.Compute(ingest.Events);
-
-        string sourceTag = selectedSource.ToTag();
-        IReadOnlyList<string> adapterWarnings = adapted.Warnings
-            .Select(warning => $"[{sourceTag}] {warning}")
-            .ToList();
-
-        var response = new AnalyzeResponse
-        {
-            SelectedSource = sourceTag,
-            Adapter = new AdapterStageResponse
-            {
-                Source = sourceTag,
-                EventCount = adapted.Events.Count,
-                Warnings = adapterWarnings,
-            },
-            Ingest = ingest,
-            Semantic = semantic,
-            Metric = metric,
-            Warnings = adapterWarnings
-                .Concat(ingest.Warnings)
-                .Concat(semantic.Warnings)
-                .ToList(),
-        };
-        return Results.Ok(response);
+        return await RunPipelineAsync(
+            telemetry_live,
+            telemetry_playtest,
+            game_definition,
+            context_bundle,
+            adapter,
+            adaptiveLayer,
+            telemetryIngestLayer,
+            semanticAnalyzer,
+            metricEngine,
+            impactAnalyzer,
+            riskFramer,
+            reportGenerator,
+            httpClientFactory,
+            configuration,
+            cancellationToken);
     }
     catch (InvalidDataException exception)
     {
@@ -95,34 +86,241 @@ app.MapPost("/analyze", async (
         return Results.BadRequest(new { error = exception.Message });
     }
 })
-.WithName("AnalyzeSelectedTelemetrySourceL0ToL3")
+.WithName("AnalyzePipeline")
 .Accepts<IFormFile>("multipart/form-data")
 .Produces<AnalyzeResponse>()
 .ProducesProblem(StatusCodes.Status400BadRequest)
 .DisableAntiforgery();
 
-var summaries = new[]
+app.MapGet("/analyze/demo", async (
+    AdaptiveLayer adaptiveLayer,
+    TelemetryIngestLayer telemetryIngestLayer,
+    SemanticAnalyzer semanticAnalyzer,
+    MetricEngine metricEngine,
+    ImpactAnalyzer impactAnalyzer,
+    RiskFramer riskFramer,
+    ReportGenerator reportGenerator,
+    IHttpClientFactory httpClientFactory,
+    IConfiguration configuration,
+    CancellationToken cancellationToken) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    string fixtureRoot = ResolveFixtureRoot();
+    if (!Directory.Exists(fixtureRoot))
+    {
+        return Results.NotFound(new { error = $"fixture directory not found: {fixtureRoot}" });
+    }
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
+    try
+    {
+        return await RunPipelineFromFilesAsync(
+            Path.Combine(fixtureRoot, "telemetry_live.json"),
+            Path.Combine(fixtureRoot, "telemetry_playtest.json"),
+            Path.Combine(fixtureRoot, "game_definition.json"),
+            Path.Combine(fixtureRoot, "context_bundle.json"),
+            Path.Combine(fixtureRoot, "adapter.json"),
+            adaptiveLayer,
+            telemetryIngestLayer,
+            semanticAnalyzer,
+            metricEngine,
+            impactAnalyzer,
+            riskFramer,
+            reportGenerator,
+            httpClientFactory,
+            configuration,
+            cancellationToken);
+    }
+    catch (Exception exception) when (exception is InvalidDataException or System.Text.Json.JsonException or ArgumentException)
+    {
+        return Results.BadRequest(new { error = exception.Message });
+    }
 })
-.WithName("GetWeatherForecast");
+.WithName("AnalyzeDemoCase")
+.Produces<AnalyzeResponse>()
+.ProducesProblem(StatusCodes.Status404NotFound)
+.ProducesProblem(StatusCodes.Status400BadRequest);
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+static async Task<IResult> RunPipelineAsync(
+    IFormFile telemetryLive,
+    IFormFile telemetryPlaytest,
+    IFormFile gameDefinition,
+    IFormFile contextBundle,
+    IFormFile? adapter,
+    AdaptiveLayer adaptiveLayer,
+    TelemetryIngestLayer telemetryIngestLayer,
+    SemanticAnalyzer semanticAnalyzer,
+    MetricEngine metricEngine,
+    ImpactAnalyzer impactAnalyzer,
+    RiskFramer riskFramer,
+    ReportGenerator reportGenerator,
+    IHttpClientFactory httpClientFactory,
+    IConfiguration configuration,
+    CancellationToken cancellationToken)
 {
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+    string liveJson = await JsonUploadParser.ReadTextAsync(telemetryLive, cancellationToken);
+    string playtestJson = await JsonUploadParser.ReadTextAsync(telemetryPlaytest, cancellationToken);
+    string gameDefinitionJson = await JsonUploadParser.ReadTextAsync(gameDefinition, cancellationToken);
+    string contextBundleJson = await JsonUploadParser.ReadTextAsync(contextBundle, cancellationToken);
+    string? adapterJson = adapter is null
+        ? null
+        : await JsonUploadParser.ReadTextAsync(adapter, cancellationToken);
+
+    return await ExecutePipelineAsync(
+        liveJson,
+        playtestJson,
+        gameDefinitionJson,
+        contextBundleJson,
+        adapterJson,
+        adaptiveLayer,
+        telemetryIngestLayer,
+        semanticAnalyzer,
+        metricEngine,
+        impactAnalyzer,
+        riskFramer,
+        reportGenerator,
+        httpClientFactory,
+        configuration,
+        cancellationToken);
+}
+
+static async Task<IResult> RunPipelineFromFilesAsync(
+    string telemetryLivePath,
+    string telemetryPlaytestPath,
+    string gameDefinitionPath,
+    string contextBundlePath,
+    string adapterPath,
+    AdaptiveLayer adaptiveLayer,
+    TelemetryIngestLayer telemetryIngestLayer,
+    SemanticAnalyzer semanticAnalyzer,
+    MetricEngine metricEngine,
+    ImpactAnalyzer impactAnalyzer,
+    RiskFramer riskFramer,
+    ReportGenerator reportGenerator,
+    IHttpClientFactory httpClientFactory,
+    IConfiguration configuration,
+    CancellationToken cancellationToken)
+{
+    string liveJson = await File.ReadAllTextAsync(telemetryLivePath, cancellationToken);
+    string playtestJson = await File.ReadAllTextAsync(telemetryPlaytestPath, cancellationToken);
+    string gameDefinitionJson = await File.ReadAllTextAsync(gameDefinitionPath, cancellationToken);
+    string contextBundleJson = await File.ReadAllTextAsync(contextBundlePath, cancellationToken);
+    string? adapterJson = File.Exists(adapterPath)
+        ? await File.ReadAllTextAsync(adapterPath, cancellationToken)
+        : null;
+
+    return await ExecutePipelineAsync(
+        liveJson,
+        playtestJson,
+        gameDefinitionJson,
+        contextBundleJson,
+        adapterJson,
+        adaptiveLayer,
+        telemetryIngestLayer,
+        semanticAnalyzer,
+        metricEngine,
+        impactAnalyzer,
+        riskFramer,
+        reportGenerator,
+        httpClientFactory,
+        configuration,
+        cancellationToken);
+}
+
+static async Task<IResult> ExecutePipelineAsync(
+    string liveTelemetryJson,
+    string playtestTelemetryJson,
+    string gameDefinitionJson,
+    string contextBundleJson,
+    string? adapterJson,
+    AdaptiveLayer adaptiveLayer,
+    TelemetryIngestLayer telemetryIngestLayer,
+    SemanticAnalyzer semanticAnalyzer,
+    MetricEngine metricEngine,
+    ImpactAnalyzer impactAnalyzer,
+    RiskFramer riskFramer,
+    ReportGenerator reportGenerator,
+    IHttpClientFactory httpClientFactory,
+    IConfiguration configuration,
+    CancellationToken cancellationToken)
+{
+    AdapterConfig adapter = AdapterConfig.Parse(adapterJson);
+    var (adaptedLive, adaptedPlaytest) = adaptiveLayer.ApplyTelemetry(
+        liveTelemetryJson,
+        playtestTelemetryJson,
+        adapter);
+    TelemetryIngestResult telemetryIngest = telemetryIngestLayer.Normalize(
+        adaptedLive.Records,
+        adaptedPlaytest.Records);
+    MetricResult metric = metricEngine.FromTelemetry(telemetryIngest.Records);
+    SemanticResult semantic = semanticAnalyzer.AnalyzeFromMetrics(metric, gameDefinitionJson);
+    ContextBundle context = ContextBundleParser.Parse(contextBundleJson);
+    ImpactResult impact = impactAnalyzer.Analyze(metric, context);
+    RiskResult risk = riskFramer.Analyze(impact, context);
+    LlmOptions llmOptions = ReadLlmOptions(configuration);
+    HttpClient httpClient = httpClientFactory.CreateClient();
+    httpClient.Timeout = TimeSpan.FromSeconds(llmOptions.TimeoutSeconds);
+    InsightReport report = await reportGenerator.GenerateAsync(
+        metric,
+        context,
+        impact,
+        risk,
+        llmOptions,
+        httpClient,
+        cancellationToken);
+
+    IReadOnlyList<string> adapterWarnings = adaptedLive.Warnings
+        .Select(warning => $"[live] {warning}")
+        .Concat(adaptedPlaytest.Warnings.Select(warning => $"[playtest] {warning}"))
+        .ToList();
+
+    var ingest = new IngestResult
+    {
+        MetricRows = telemetryIngest.Records,
+        Warnings = telemetryIngest.Warnings,
+    };
+
+    var response = new AnalyzeResponse
+    {
+        Adapter = new AdapterStageResponse
+        {
+            LiveRecordCount = adaptedLive.Records.Count,
+            PlaytestRecordCount = adaptedPlaytest.Records.Count,
+            Warnings = adapterWarnings,
+        },
+        Ingest = ingest,
+        Semantic = semantic,
+        Metric = metric,
+        Context = context,
+        Impact = impact,
+        Risk = risk,
+        Report = report,
+        Warnings = adapterWarnings
+            .Concat(ingest.Warnings)
+            .Concat(semantic.Warnings)
+            .Concat(context.Warnings)
+            .ToList(),
+    };
+    return Results.Ok(response);
+}
+
+static LlmOptions ReadLlmOptions(IConfiguration configuration) => new()
+{
+    Provider = configuration["Llm:Provider"] ?? "OpenAI",
+    ApiKey = configuration["Llm:ApiKey"],
+    Model = configuration["Llm:Model"] ?? "gpt-4o-mini",
+    BaseUrl = configuration["Llm:BaseUrl"] ?? "https://api.openai.com/v1",
+    TimeoutSeconds = int.TryParse(configuration["Llm:TimeoutSeconds"], out int timeout) ? timeout : 30,
+};
+
+static string ResolveFixtureRoot()
+{
+    string[] candidates =
+    [
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "fixtures", "demo_case")),
+        Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "fixtures", "demo_case")),
+        Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "fixtures", "demo_case")),
+    ];
+
+    return candidates.FirstOrDefault(Directory.Exists) ?? candidates[0];
 }

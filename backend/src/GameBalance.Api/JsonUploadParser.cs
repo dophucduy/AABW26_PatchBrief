@@ -58,6 +58,54 @@ internal static class JsonUploadParser
         return await reader.ReadToEndAsync(cancellationToken);
     }
 
+    public static async Task<IReadOnlyList<Dictionary<string, object?>>> ParseEventsFromFileAsync(
+        string path,
+        CancellationToken cancellationToken)
+    {
+        string json = await File.ReadAllTextAsync(path, cancellationToken);
+        string fieldName = Path.GetFileName(path);
+        try
+        {
+            if (Path.GetExtension(path).Equals(".jsonl", StringComparison.OrdinalIgnoreCase) ||
+                Path.GetExtension(path).Equals(".ndjson", StringComparison.OrdinalIgnoreCase))
+            {
+                return ParseJsonLines(json);
+            }
+
+            using JsonDocument document = JsonDocument.Parse(json);
+            JsonElement events = document.RootElement;
+            if (events.ValueKind == JsonValueKind.Object &&
+                events.TryGetProperty("events", out JsonElement wrapped))
+            {
+                events = wrapped;
+            }
+
+            if (events.ValueKind != JsonValueKind.Array)
+            {
+                throw new JsonException("expected a JSON array or an object containing an 'events' array");
+            }
+
+            var result = new List<Dictionary<string, object?>>();
+            foreach (JsonElement item in events.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.Object)
+                {
+                    throw new JsonException($"event at index {result.Count} is not a JSON object");
+                }
+
+                result.Add(ConvertObject(item));
+            }
+
+            return result;
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidDataException(
+                $"invalid JSON in '{fieldName}': {exception.Message}",
+                exception);
+        }
+    }
+
     private static Dictionary<string, object?> ConvertObject(JsonElement element) =>
         element.EnumerateObject().ToDictionary(
             property => property.Name,

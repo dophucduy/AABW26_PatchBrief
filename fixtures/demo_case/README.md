@@ -1,6 +1,6 @@
 # Golden Demo Case - Balance & Patch Decision Brief
 
-This directory contains a complete, valid set of the 7 input files representing a typical balance decision scenario for a MOBA game (`arena_moba`).
+This directory contains a complete, valid set of input files representing a typical balance decision scenario for a MOBA game (`arena_moba`).
 
 ## Roster & Balance Narrative
 - **`char_A` (Ironclad - Tank)**: 
@@ -18,10 +18,16 @@ This directory contains a complete, valid set of the 7 input files representing 
 
 ## File Manifest
 
-1. **`game_definition.json`**: Roster (Ironclad, Vex), bracket rating thresholds (Bronze < 1000, Diamond >= 1000), and base stats.
-2. **`adapter.json`**: L0 Adaptive field mappings. Converts studio-specific raw keys (`hero`, `time`, `rank`, `player`, `match`, `event`) to canonical schema keys (`entity_id`, `timestamp`, `bracket_id`, `player_id`, `match_id`, `event_type`).
-3. **`player_online.json`**: Live telemetry event stream (15 matches, 50+ events) utilizing custom studio keys.
-4. **`player_offline.json`**: Playtest telemetry event stream (4 matches) utilizing custom studio keys.
-5. **`rules.json`**: Lever rules. Declares `base_damage` as an open lever for `char_A`, but `identity_skill_shield` as locked.
-6. **`update_plan.json`**: Details the proposed base damage nerf for `char_A` from 45 to 40.
-7. **`community.json`**: Cluster analysis of community sentiment, showing the negative sentiment and quotes for both characters.
+### API inputs (L0–L7 pipeline)
+
+1. **`game_definition.json`**: Balance config — roster (Ironclad, Vex), bracket thresholds, and base stats.
+2. **`adapter.json`**: L0 metric mappings. Converts studio export keys (`hero`, `bracket`, `wr`, `pr`) to canonical telemetry fields (`entity_id`, `bracket_id`, `win_rate`, `pick_rate`).
+3. **`telemetry_live.json`**: Structured live match telemetry — win rate, pick rate, sessions per entity × bracket (GameAnalytics-style aggregate, not raw event logs).
+4. **`telemetry_playtest.json`**: Structured playtest telemetry in the same aggregate format.
+5. **`context_bundle.json`**: Produced by L4 (Context Layer). Merges game definition, rules, update plan, community sentiment, and joined changes for L5–L7.
+
+### L4 source inputs (not consumed directly by L5–L7)
+
+6. **`rules.json`**: Lever rules. Declares `base_damage` as an open lever for `char_A`, but `identity_skill_shield` as locked.
+7. **`update_plan.json`**: Details the proposed base damage nerf for `char_A` from 45 to 40.
+8. **`community.json`**: Cluster analysis of community sentiment, showing the negative sentiment and quotes for both characters.

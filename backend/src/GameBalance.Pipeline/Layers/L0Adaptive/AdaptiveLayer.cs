@@ -62,6 +62,62 @@ public sealed class AdaptiveLayer
         return (Adapt(onlineEvents, adapter), Adapt(offlineEvents, adapter));
     }
 
+    /// <summary>Adapt a structured telemetry export (win/pick/economy aggregates).</summary>
+    public TelemetryAdapterResult AdaptTelemetry(string telemetryJson, AdapterConfig? adapter)
+    {
+        List<Dictionary<string, object?>> rows = TelemetryFormats.Parse(telemetryJson);
+        Dictionary<string, string> metricMap = adapter?.MetricMap ?? AdapterConfig.Empty.MetricMap;
+
+        if (metricMap.Count == 0)
+        {
+            var passthrough = rows
+                .Select(row => new Dictionary<string, object?>(row))
+                .ToList();
+            return new TelemetryAdapterResult { Records = passthrough };
+        }
+
+        var adapted = new List<Dictionary<string, object?>>(rows.Count);
+        foreach (Dictionary<string, object?> row in rows)
+        {
+            adapted.Add(AdaptRow(row, metricMap));
+        }
+
+        var warnings = new List<string>();
+        foreach ((string source, string canonical) in metricMap)
+        {
+            bool seen = rows.Any(row => row.ContainsKey(source));
+            if (!seen)
+            {
+                warnings.Add(
+                    $"adapter maps '{source}' -> '{canonical}' but no telemetry row " +
+                    $"contains field '{source}'; mapping skipped");
+            }
+        }
+
+        return new TelemetryAdapterResult { Records = adapted, Warnings = warnings };
+    }
+
+    /// <summary>Adapt live and playtest telemetry exports.</summary>
+    public (TelemetryAdapterResult Live, TelemetryAdapterResult Playtest) ApplyTelemetry(
+        string liveTelemetryJson,
+        string playtestTelemetryJson,
+        AdapterConfig? adapter) =>
+        (AdaptTelemetry(liveTelemetryJson, adapter), AdaptTelemetry(playtestTelemetryJson, adapter));
+
+    private static Dictionary<string, object?> AdaptRow(
+        Dictionary<string, object?> row,
+        Dictionary<string, string> metricMap)
+    {
+        var result = new Dictionary<string, object?>(row.Count);
+        foreach ((string key, object? value) in row)
+        {
+            string outKey = metricMap.TryGetValue(key, out string? canonical) ? canonical : key;
+            result[outKey] = value;
+        }
+
+        return result;
+    }
+
     private static Dictionary<string, object?> AdaptEvent(
         Dictionary<string, object?> ev,
         Dictionary<string, string> fieldMap)
