@@ -4,6 +4,10 @@ Decision-support tool for game designers. Upload telemetry, game definition, des
 
 Patch Brief does **not** auto-balance games. It frames the patch so designers can decide before shipping.
 
+#Demo Video
+
+https://github.com/user-attachments/assets/b7b0e133-9919-49d0-b801-c6dfaa07ece9
+
 ## Architecture
 
 Layers 0–6 are deterministic C#. Layer 7 writes the report (LLM if configured, otherwise a template fallback).
